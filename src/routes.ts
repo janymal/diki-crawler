@@ -1,6 +1,5 @@
 import { createCheerioRouter } from "crawlee";
 import url from "url";
-import html from "dgram"
 
 export const router = createCheerioRouter();
 
