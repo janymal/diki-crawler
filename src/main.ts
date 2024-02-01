@@ -3,7 +3,7 @@ import { router } from "./routes.js";
 
 const sources = [
   {
-    url: "https://www.diki.pl/slownik-angielskiego?q=ground",
+    url: "https://www.diki.pl/slownik-angielskiego?q=antemedial",
     userData: {
       label: "detail",
     },

@@ -32,6 +32,7 @@ interface IMeaning {
   hws: string[];
   grammarTags?: string[];
   exampleSentences: IExampleSentence[];
+  thematicDictionary?: string;
 }
 
 interface IExampleSentence {
@@ -42,7 +43,7 @@ interface IExampleSentence {
 
 function getRecordings(
   $: CheerioAPI,
-  element: BasicAcceptedElems<AnyNode>|undefined,
+  element: BasicAcceptedElems<AnyNode> | undefined,
   request_url: string = "",
 ): IRecording[] {
   return $(element)
@@ -154,6 +155,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                   };
                 })
                 .toArray(),
+               thematicDictionary: $(el).find(".cat").text().trim()
             };
             meaningGroup.meanings.push(meaning);
           });
