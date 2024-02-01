@@ -1,5 +1,7 @@
 import { createCheerioRouter } from "crawlee";
 import url from "url";
+// const cheerio = require("cheerio");
+import { CheerioAPI, BasicAcceptedElems, AnyNode } from "cheerio";
 
 export const router = createCheerioRouter();
 
@@ -29,12 +31,32 @@ interface IMeaningGroup {
 interface IMeaning {
   hws: string[];
   grammarTags?: string[];
-  exampleSentences: IExampleSentences[];
+  exampleSentences: IExampleSentence[];
 }
 
-interface IExampleSentences {
+interface IExampleSentence {
   sentence: string;
   translation: string;
+  recordings: IRecording[];
+}
+
+function getRecordings(
+  $: CheerioAPI,
+  element: BasicAcceptedElems<AnyNode>|undefined,
+  request_url: string = "",
+): IRecording[] {
+  return $(element)
+    ?.find(".hasRecording")
+    .map((_, el) => {
+      return {
+        lang: $(el).attr("class")?.split(" ")[0]!,
+        url: url.resolve(
+          request_url,
+          $(el).find(".soundOnClick").first().attr("data-audio-url")!,
+        ),
+      };
+    })
+    .toArray();
 }
 
 router.addHandler("detail", async ({ $, pushData, request, log }) => {
@@ -52,9 +74,6 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
         $(el)
           .children(".hw")
           .each((_, el) => {
-            const recordingAndTranscriptions = $(el)
-              .nextAll(".recordingsAndTranscriptions")
-              .first();
             const additionalInformations = $(el)
               .nextAll(".dictionaryEntryHeaderAdditionalInformation")
               .first();
@@ -65,28 +84,22 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                 popularity = $(el).text().length;
               if ($(el).hasClass("languageVariety")) variety = $(el).text();
             });
-            const recordings = recordingAndTranscriptions
-              ?.find(".hasRecording")
-              .map((_, el) => {
-                const r: IRecording = {
-                  lang: $(el).attr("class")?.split(" ")[0]!,
-                  url: url.resolve(
-                    request.url,
-                    $(el).find(".soundOnClick").first().attr("data-audio-url")!,
-                  ),
-                };
-                return r;
-              })
-              .toArray();
+            const recordingsAndTranscriptions = $(el)
+              .nextAll(".recordingsAndTranscriptions")
+              .get(0);
             const hw: IHw = {
               title: $(el).text().trim(),
-              transcription: recordingAndTranscriptions
+              transcription: $(recordingsAndTranscriptions)
                 ?.find(".phoneticTranscription")
                 .first()
                 .find("img")
                 .first()
                 .attr("src"),
-              recordings: recordings ? recordings : [],
+              recordings: getRecordings(
+                $,
+                recordingsAndTranscriptions,
+                request.url,
+              ),
               popularity: popularity,
               variety: variety,
             };
@@ -137,6 +150,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                       1,
                       translation.length - 1,
                     ),
+                    recordings: getRecordings($, el, request.url),
                   };
                 })
                 .toArray(),
