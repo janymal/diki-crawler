@@ -28,6 +28,7 @@ interface IMeaningGroup {
 
 interface IMeaning {
   hws: string[];
+  grammarTags?: string[];
   exampleSentences: IExampleSentences[];
 }
 
@@ -108,6 +109,13 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
               hws: $(el)
                 .find(".hw")
                 .map((_, el) => $(el).text().trim())
+                .toArray(),
+              grammarTags: $(el)
+                .find(".grammarTag")
+                .map((_, el) => {
+                  const t = $(el).text();
+                  return t.substring(1, t.length - 1);
+                })
                 .toArray(),
               exampleSentences: $(el)
                 .find(".exampleSentence")
