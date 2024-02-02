@@ -19,8 +19,7 @@ interface IHw {
   title: string;
   transcription?: string;
   recordings?: IRecording[];
-  popularity: number;
-  variety?: string;
+  additionalInformation: IAdditionalInformation;
   lessPopular: boolean;
 }
 
@@ -29,10 +28,16 @@ interface IMeaningGroup {
   meanings: IMeaning[];
 }
 
+interface IAdditionalInformation {
+  languageVariety?: string;
+  popularity?: number;
+  languageRegister?: string[];
+}
+
 interface IMeaning {
   hws: string[];
+  additionalInformation: IAdditionalInformation;
   grammarTags?: string[];
-  languageRegister?: string[];
   exampleSentences: IExampleSentence[];
   thematicDictionary?: string;
 }
@@ -62,6 +67,25 @@ function getRecordings(
     .toArray();
 }
 
+function getAdditionalInformation(
+  $: CheerioAPI,
+  element: BasicAcceptedElems<AnyNode> | undefined
+): IAdditionalInformation {
+  let popularity = undefined;
+  let variety = undefined;
+  let register = undefined;
+  $(element).children().each((_, el) => {
+    if ($(el).hasClass("starsForNumOccurrences")) popularity = $(el).text().length;
+    else if ($(el).hasClass("languageVariety")) variety = $(el).text();
+    else if ($(el).hasClass("languageRegister")) register = $(el).text();
+  });
+  return {
+    languageVariety: variety,
+    languageRegister: register,
+    popularity: popularity
+  }
+}
+
 router.addHandler("detail", async ({ $, pushData, request, log }) => {
   const dictionaryEntities = $("div .diki-results-left-column").find(
     "div .dictionaryEntity",
@@ -77,16 +101,9 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
         $(el)
           .children(".hw")
           .each((_, el) => {
-            const additionalInformations = $(el)
+            const additionalInformation = $(el)
               .nextAll(".dictionaryEntryHeaderAdditionalInformation")
-              .first();
-            let popularity = 0;
-            let variety = undefined;
-            additionalInformations.children().each((_, el) => {
-              if ($(el).hasClass("starsForNumOccurrences"))
-                popularity = $(el).text().length;
-              if ($(el).hasClass("languageVariety")) variety = $(el).text();
-            });
+              .get(0);
             const recordingsAndTranscriptions = $(el)
               .nextAll(".recordingsAndTranscriptions")
               .get(0);
@@ -103,8 +120,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                 recordingsAndTranscriptions,
                 request.url,
               ),
-              popularity: popularity,
-              variety: variety,
+              additionalInformation: getAdditionalInformation($, additionalInformation),
               lessPopular: $(el).hasClass("hwLessPopularAlternative")
             };
             entity.hws.push(hw);
@@ -122,6 +138,9 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
           .first()
           .children("li")
           .each((_, el) => {
+            const additionalInformation = $(el)
+              .find(".meaningAdditionalInformation")
+              .get(0);
             const meaning: IMeaning = {
               hws: $(el)
                 .find(".hw")
@@ -134,12 +153,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                   return t.substring(1, t.length - 1);
                 })
                 .toArray(),
-              languageRegister: $(el)
-                .find(".languageRegister")
-                .map((_, el) => {
-                  return $(el).text();
-                })
-                .toArray(),
+              additionalInformation: getAdditionalInformation($, additionalInformation),
               exampleSentences: $(el)
                 .find(".exampleSentence")
                 .map((_, el) => {
@@ -151,7 +165,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                   return {
                     sentence: $(el)
                       .contents()
-                      .filter(function () {
+                      .filter(function() {
                         return this.nodeType == 3;
                       })
                       .text()
@@ -164,7 +178,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                   };
                 })
                 .toArray(),
-               thematicDictionary: $(el).find(".cat").text().trim()
+              thematicDictionary: $(el).find(".cat").text().trim()
             };
             meaningGroup.meanings.push(meaning);
           });
