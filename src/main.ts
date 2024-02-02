@@ -3,7 +3,7 @@ import { router } from "./routes.js";
 
 const sources = [
   {
-    url: "https://www.diki.pl/slownik-angielskiego?q=thy",
+    url: "https://www.diki.pl/slownik-angielskiego?q=scarcely",
     userData: {
       label: "detail",
     },

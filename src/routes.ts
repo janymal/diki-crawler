@@ -48,6 +48,7 @@ interface IMeaning {
 
 interface IRef {
   word: string;
+  type: string;
   recordings?: IRecording[];
 }
 
@@ -224,6 +225,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                     .get(0);
                   return {
                     word: $(el).text(),
+                    type: getTextNodes($, $(el).parent().get(0)).split(":")[0],
                     recordings: getRecordings($, recordings, request.url),
                   };
                 })
