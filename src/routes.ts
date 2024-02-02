@@ -32,6 +32,7 @@ interface IAdditionalInformation {
   languageVariety?: string;
   popularity?: number;
   languageRegister?: string[];
+  other?: string[];
 }
 
 interface IMeaning {
@@ -86,6 +87,7 @@ function getAdditionalInformation(
     languageVariety: variety,
     languageRegister: register,
     popularity: popularity,
+    other: removeBrackets(getTextNodes($, element)).split(",")
   };
 }
 
@@ -95,14 +97,15 @@ function removeBrackets(str: string): string {
 
 function getTextNodes(
   $: CheerioAPI,
-  element: BasicAcceptedElems<AnyNode>,
+  element: BasicAcceptedElems<AnyNode> | undefined,
 ): string {
   return $(element)
     .contents()
     .filter(function () {
       return this.nodeType == 3;
     })
-    .text();
+    .text()
+    .trim();
 }
 
 router.addHandler("detail", async ({ $, pushData, request, log }) => {
@@ -188,7 +191,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                     .text()
                     .trim();
                   return {
-                    sentence: getTextNodes($, el).trim(),
+                    sentence: getTextNodes($, el),
                     translation: removeBrackets(translation),
                     recordings: getRecordings($, el, request.url),
                   };
