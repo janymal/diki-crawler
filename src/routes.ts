@@ -69,21 +69,24 @@ function getRecordings(
 
 function getAdditionalInformation(
   $: CheerioAPI,
-  element: BasicAcceptedElems<AnyNode> | undefined
+  element: BasicAcceptedElems<AnyNode> | undefined,
 ): IAdditionalInformation {
   let popularity = undefined;
   let variety = undefined;
   let register = undefined;
-  $(element).children().each((_, el) => {
-    if ($(el).hasClass("starsForNumOccurrences")) popularity = $(el).text().length;
-    else if ($(el).hasClass("languageVariety")) variety = $(el).text();
-    else if ($(el).hasClass("languageRegister")) register = $(el).text();
-  });
+  $(element)
+    .children()
+    .each((_, el) => {
+      if ($(el).hasClass("starsForNumOccurrences"))
+        popularity = $(el).text().length;
+      else if ($(el).hasClass("languageVariety")) variety = $(el).text();
+      else if ($(el).hasClass("languageRegister")) register = $(el).text();
+    });
   return {
     languageVariety: variety,
     languageRegister: register,
-    popularity: popularity
-  }
+    popularity: popularity,
+  };
 }
 
 router.addHandler("detail", async ({ $, pushData, request, log }) => {
@@ -120,8 +123,11 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                 recordingsAndTranscriptions,
                 request.url,
               ),
-              additionalInformation: getAdditionalInformation($, additionalInformation),
-              lessPopular: $(el).hasClass("hwLessPopularAlternative")
+              additionalInformation: getAdditionalInformation(
+                $,
+                additionalInformation,
+              ),
+              lessPopular: $(el).hasClass("hwLessPopularAlternative"),
             };
             entity.hws.push(hw);
           });
@@ -153,7 +159,10 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                   return t.substring(1, t.length - 1);
                 })
                 .toArray(),
-              additionalInformation: getAdditionalInformation($, additionalInformation),
+              additionalInformation: getAdditionalInformation(
+                $,
+                additionalInformation,
+              ),
               exampleSentences: $(el)
                 .find(".exampleSentence")
                 .map((_, el) => {
@@ -165,7 +174,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                   return {
                     sentence: $(el)
                       .contents()
-                      .filter(function() {
+                      .filter(function () {
                         return this.nodeType == 3;
                       })
                       .text()
@@ -178,7 +187,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                   };
                 })
                 .toArray(),
-              thematicDictionary: $(el).find(".cat").text().trim()
+              thematicDictionary: $(el).find(".cat").text().trim(),
             };
             meaningGroup.meanings.push(meaning);
           });
