@@ -43,6 +43,12 @@ interface IMeaning {
   exampleSentences: IExampleSentence[];
   thematicDictionary?: string;
   note?: string;
+  refs?: IRef[];
+}
+
+interface IRef {
+  word: string;
+  recordings?: IRecording[];
 }
 
 interface IExampleSentence {
@@ -207,7 +213,23 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                 .toArray(),
               thematicDictionary: $(el).find(".cat").text().trim(),
               note: getNote($, el),
+              refs: $(el)
+                .find(".ref")
+                .children("div")
+                .first()
+                .children("a")
+                .map((_, el) => {
+                  const recordings = $(el)
+                    .next(".recordingsAndTranscriptions")
+                    .get(0);
+                  return {
+                    word: $(el).text(),
+                    recordings: getRecordings($, recordings, request.url),
+                  };
+                })
+                .toArray(),
             };
+
             meaningGroup.meanings.push(meaning);
           });
         entity.meaningGroups.push(meaningGroup);
