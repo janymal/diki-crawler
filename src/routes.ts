@@ -8,6 +8,7 @@ export const router = createCheerioRouter();
 interface IEntity {
   hws: IHw[];
   meaningGroups: IMeaningGroup[];
+  note?: string;
 }
 
 interface IRecording {
@@ -41,6 +42,7 @@ interface IMeaning {
   grammarTags?: string[];
   exampleSentences: IExampleSentence[];
   thematicDictionary?: string;
+  note?: string;
 }
 
 interface IExampleSentence {
@@ -87,7 +89,7 @@ function getAdditionalInformation(
     languageVariety: variety,
     languageRegister: register,
     popularity: popularity,
-    other: removeBrackets(getTextNodes($, element)).split(",")
+    other: removeBrackets(getTextNodes($, element)).split(","),
   };
 }
 
@@ -108,6 +110,11 @@ function getTextNodes(
     .trim();
 }
 
+function getNote($, el: BasicAcceptedElems<AnyNode> | undefined): string {
+  const noteElement = $(el).children(".nt").get(0);
+  return getTextNodes($, noteElement);
+}
+
 router.addHandler("detail", async ({ $, pushData, request, log }) => {
   const dictionaryEntities = $("div .diki-results-left-column").find(
     "div .dictionaryEntity",
@@ -116,6 +123,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
     const entity: IEntity = {
       hws: [],
       meaningGroups: [],
+      note: getNote($, $(el).children(".hws").get(0)),
     };
     $(el)
       .find("h1")
@@ -198,6 +206,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                 })
                 .toArray(),
               thematicDictionary: $(el).find(".cat").text().trim(),
+              note: getNote($, el),
             };
             meaningGroup.meanings.push(meaning);
           });
