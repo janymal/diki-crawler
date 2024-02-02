@@ -18,9 +18,10 @@ interface IRecording {
 interface IHw {
   title: string;
   transcription?: string;
-  recordings: IRecording[]; // TODO: is it optional?
+  recordings?: IRecording[];
   popularity: number;
   variety?: string;
+  lessPopular: boolean;
 }
 
 interface IMeaningGroup {
@@ -104,6 +105,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
               ),
               popularity: popularity,
               variety: variety,
+              lessPopular: $(el).hasClass("hwLessPopularAlternative")
             };
             entity.hws.push(hw);
           });
