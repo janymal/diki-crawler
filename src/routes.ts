@@ -89,6 +89,22 @@ function getAdditionalInformation(
   };
 }
 
+function removeBrackets(str: string): string {
+  return str.substring(1, str.length - 1);
+}
+
+function getTextNodes(
+  $: CheerioAPI,
+  element: BasicAcceptedElems<AnyNode>,
+): string {
+  return $(element)
+    .contents()
+    .filter(function () {
+      return this.nodeType == 3;
+    })
+    .text();
+}
+
 router.addHandler("detail", async ({ $, pushData, request, log }) => {
   const dictionaryEntities = $("div .diki-results-left-column").find(
     "div .dictionaryEntity",
@@ -156,7 +172,7 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                 .find(".grammarTag")
                 .map((_, el) => {
                   const t = $(el).text();
-                  return t.substring(1, t.length - 1);
+                  return removeBrackets(t);
                 })
                 .toArray(),
               additionalInformation: getAdditionalInformation(
@@ -172,17 +188,8 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                     .text()
                     .trim();
                   return {
-                    sentence: $(el)
-                      .contents()
-                      .filter(function () {
-                        return this.nodeType == 3;
-                      })
-                      .text()
-                      .trim(),
-                    translation: translation.substring(
-                      1,
-                      translation.length - 1,
-                    ),
+                    sentence: getTextNodes($, el).trim(),
+                    translation: removeBrackets(translation),
                     recordings: getRecordings($, el, request.url),
                   };
                 })
