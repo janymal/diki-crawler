@@ -31,6 +31,7 @@ interface IMeaningGroup {
 interface IMeaning {
   hws: string[];
   grammarTags?: string[];
+  languageRegister?: string[];
   exampleSentences: IExampleSentence[];
   thematicDictionary?: string;
 }
@@ -129,6 +130,12 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                 .map((_, el) => {
                   const t = $(el).text();
                   return t.substring(1, t.length - 1);
+                })
+                .toArray(),
+              languageRegister: $(el)
+                .find(".languageRegister")
+                .map((_, el) => {
+                  return $(el).text();
                 })
                 .toArray(),
               exampleSentences: $(el)
