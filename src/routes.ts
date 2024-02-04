@@ -1,7 +1,8 @@
 import { createCheerioRouter } from "crawlee";
 import url from "url";
-// const cheerio = require("cheerio");
-import { CheerioAPI, BasicAcceptedElems, AnyNode } from "cheerio";
+import type { CheerioAPI, BasicAcceptedElems, AnyNode } from "cheerio" with {
+  "resolution-mode": "require"
+}
 
 export const router = createCheerioRouter();
 
@@ -117,7 +118,7 @@ function getTextNodes(
     .trim();
 }
 
-function getNote($, el: BasicAcceptedElems<AnyNode> | undefined): string {
+function getNote($: CheerioAPI, el: BasicAcceptedElems<AnyNode> | undefined): string {
   const noteElement = $(el).children(".nt").get(0);
   return getTextNodes($, noteElement);
 }
