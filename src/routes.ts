@@ -1,8 +1,10 @@
 import { createCheerioRouter } from "crawlee";
 import url from "url";
-import type { CheerioAPI, BasicAcceptedElems, AnyNode } from "cheerio" with {
-  "resolution-mode": "require"
-}
+import type {
+  CheerioAPI,
+  BasicAcceptedElems,
+  AnyNode,
+} from "cheerio" with { "resolution-mode": "require" };
 
 export const router = createCheerioRouter();
 
@@ -65,13 +67,13 @@ function getRecordings(
   request_url: string = "",
 ): IRecording[] {
   return $(element)
-    ?.find(".hasRecording")
+    ?.children(".hasRecording")
     .map((_, el) => {
       return {
-        lang: $(el).attr("class")?.split(" ")[0]!,
+        lang: $(el).attr("class")!.split(" ")[0],
         url: url.resolve(
           request_url,
-          $(el).find(".soundOnClick").first().attr("data-audio-url")!,
+          $(el).children(".soundOnClick").attr("data-audio-url")!,
         ),
       };
     })
@@ -118,15 +120,18 @@ function getTextNodes(
     .trim();
 }
 
-function getNote($: CheerioAPI, el: BasicAcceptedElems<AnyNode> | undefined): string {
+function getNote(
+  $: CheerioAPI,
+  el: BasicAcceptedElems<AnyNode> | undefined,
+): string {
   const noteElement = $(el).children(".nt").get(0);
   return getTextNodes($, noteElement);
 }
 
 router.addHandler("detail", async ({ $, pushData, request, log }) => {
-  const dictionaryEntities = $("div .diki-results-left-column").find(
-    "div .dictionaryEntity",
-  );
+  const dictionaryEntities = $("div .diki-results-left-column")
+    .children("div")
+    .children("div .dictionaryEntity");
   dictionaryEntities.each((_, el) => {
     const entity: IEntity = {
       hws: [],
@@ -134,7 +139,8 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
       note: getNote($, $(el).children(".hws").get(0)),
     };
     $(el)
-      .find("h1")
+      .children(".hws")
+      .children("h1")
       .each((_, el) => {
         $(el)
           .children(".hw")
@@ -148,10 +154,9 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
             const hw: IHw = {
               title: $(el).text().trim(),
               transcription: $(recordingsAndTranscriptions)
-                ?.find(".phoneticTranscription")
-                .first()
-                .find("img")
-                .first()
+                ?.children(".phoneticTranscription")
+                .children("a")
+                .children("img")
                 .attr("src"),
               recordings: getRecordings(
                 $,
@@ -171,24 +176,23 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
       .children(".partOfSpeechSectionHeader")
       .each((_, el) => {
         const meaningGroup: IMeaningGroup = {
-          partOfSpeech: $(el).find(".partOfSpeech").first().text(),
+          partOfSpeech: $(el).children(".partOfSpeech").text(),
           meanings: [],
         };
         $(el)
           .nextAll(".foreignToNativeMeanings")
-          .first()
           .children("li")
           .each((_, el) => {
             const additionalInformation = $(el)
-              .find(".meaningAdditionalInformation")
+              .children(".meaningAdditionalInformation")
               .get(0);
             const meaning: IMeaning = {
               hws: $(el)
-                .find(".hw")
+                .children(".hw")
                 .map((_, el) => $(el).text().trim())
                 .toArray(),
               grammarTags: $(el)
-                .find(".grammarTag")
+                .children(".grammarTag")
                 .map((_, el) => {
                   const t = $(el).text();
                   return removeBrackets(t);
@@ -199,30 +203,31 @@ router.addHandler("detail", async ({ $, pushData, request, log }) => {
                 additionalInformation,
               ),
               exampleSentences: $(el)
-                .find(".exampleSentence")
+                .children(".exampleSentence")
                 .map((_, el) => {
                   const translation = $(el)
-                    .find(".exampleSentenceTranslation")
-                    .first()
+                    .children(".exampleSentenceTranslation")
                     .text()
                     .trim();
+                  const recordings = $(el)
+                    .children(".recordingsAndTranscriptions")
+                    .get(0);
                   return {
                     sentence: getTextNodes($, el),
                     translation: removeBrackets(translation),
-                    recordings: getRecordings($, el, request.url),
+                    recordings: getRecordings($, recordings, request.url),
                   };
                 })
                 .toArray(),
-              thematicDictionary: $(el).find(".cat").text().trim(),
+              thematicDictionary: $(el).children(".cat").text().trim(),
               note: getNote($, el),
               refs: $(el)
-                .find(".ref")
+                .children(".ref")
                 .children("div")
-                .first()
                 .children("a")
                 .map((_, el) => {
                   const recordings = $(el)
-                    .next(".recordingsAndTranscriptions")
+                    .nextAll(".recordingsAndTranscriptions")
                     .get(0);
                   return {
                     word: $(el).text(),
