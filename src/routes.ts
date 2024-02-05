@@ -1,7 +1,6 @@
-import { createCheerioRouter } from "crawlee";
+import { createCheerioRouter, type CheerioCrawlingContext } from "crawlee";
 import url from "url";
 import type {
-  CheerioAPI,
   BasicAcceptedElems,
   AnyNode,
 } from "cheerio" with { "resolution-mode": "require" };
@@ -62,18 +61,17 @@ interface IExampleSentence {
 }
 
 function getRecordings(
-  $: CheerioAPI,
+  ctx: CheerioCrawlingContext,
   element: BasicAcceptedElems<AnyNode> | undefined,
-  request_url: string = "",
 ): IRecording[] {
-  return $(element)
+  return ctx.$(element)
     ?.children(".hasRecording")
     .map((_, el) => {
       return {
-        lang: $(el).attr("class")!.split(" ")[0],
+        lang: ctx.$(el).attr("class")!.split(" ")[0],
         url: url.resolve(
-          request_url,
-          $(el).children(".soundOnClick").attr("data-audio-url")!,
+          ctx.request.url,
+          ctx.$(el).children(".soundOnClick").attr("data-audio-url")!,
         ),
       };
     })
@@ -81,25 +79,25 @@ function getRecordings(
 }
 
 function getAdditionalInformation(
-  $: CheerioAPI,
+  ctx: CheerioCrawlingContext,
   element: BasicAcceptedElems<AnyNode> | undefined,
 ): IAdditionalInformation {
   let popularity = undefined;
   let variety = undefined;
   let register = undefined;
-  $(element)
+  ctx.$(element)
     .children()
     .each((_, el) => {
-      if ($(el).hasClass("starsForNumOccurrences"))
-        popularity = $(el).text().length;
-      else if ($(el).hasClass("languageVariety")) variety = $(el).text();
-      else if ($(el).hasClass("languageRegister")) register = $(el).text();
+      if (ctx.$(el).hasClass("starsForNumOccurrences"))
+        popularity = ctx.$(el).text().length;
+      else if (ctx.$(el).hasClass("languageVariety")) variety = ctx.$(el).text();
+      else if (ctx.$(el).hasClass("languageRegister")) register = ctx.$(el).text();
     });
   return {
     languageVariety: variety,
     languageRegister: register,
     popularity: popularity,
-    other: removeBrackets(getTextNodes($, element)).split(","),
+    other: removeBrackets(getTextNodes(ctx, element)).split(","),
   };
 }
 
@@ -108,10 +106,10 @@ function removeBrackets(str: string): string {
 }
 
 function getTextNodes(
-  $: CheerioAPI,
+  ctx: CheerioCrawlingContext,
   element: BasicAcceptedElems<AnyNode> | undefined,
 ): string {
-  return $(element)
+  return ctx.$(element)
     .contents()
     .filter(function () {
       return this.nodeType == 3;
@@ -121,61 +119,59 @@ function getTextNodes(
 }
 
 function getNote(
-  $: CheerioAPI,
+  ctx: CheerioCrawlingContext,
   el: BasicAcceptedElems<AnyNode> | undefined,
 ): string {
-  const noteElement = $(el).children(".nt").get(0);
-  return getTextNodes($, noteElement);
+  const noteElement = ctx.$(el).children(".nt").get(0);
+  return getTextNodes(ctx, noteElement);
 }
 
 function getRefs(
-  $: CheerioAPI,
+  ctx: CheerioCrawlingContext,
   el: BasicAcceptedElems<AnyNode> | undefined,
-  request_url: string,
 ): IRef[] {
-  return $(el)
+  return ctx.$(el)
     .children(".ref")
     .children("div")
     .children("a")
     .map((_, el) => {
-      const recordings = $(el).nextAll(".recordingsAndTranscriptions").get(0);
+      const recordings = ctx.$(el).nextAll(".recordingsAndTranscriptions").get(0);
       return {
-        word: $(el).text(),
-        type: getTextNodes($, $(el).parent().get(0)).split(":")[0],
-        recordings: getRecordings($, recordings, request_url),
+        word: ctx.$(el).text(),
+        type: getTextNodes(ctx, ctx.$(el).parent().get(0)).split(":")[0],
+        recordings: getRecordings(ctx, recordings),
       };
     })
     .toArray();
 }
 
 function getHws(
-  $: CheerioAPI,
+  ctx: CheerioCrawlingContext,
   el: BasicAcceptedElems<AnyNode> | undefined,
-  request_url: string,
 ): IHw[] {
-  return $(el)
+  return ctx.$(el)
     .children("h1")
     .children(".hw")
     .map((_, el) => {
-      const additionalInformation = $(el)
+      const additionalInformation = ctx.$(el)
         .nextAll(".dictionaryEntryHeaderAdditionalInformation")
         .get(0);
-      const recordingsAndTranscriptions = $(el)
+      const recordingsAndTranscriptions = ctx.$(el)
         .nextAll(".recordingsAndTranscriptions")
         .get(0);
       const hw: IHw = {
-        title: $(el).text().trim(),
-        transcription: $(recordingsAndTranscriptions)
+        title: ctx.$(el).text().trim(),
+        transcription: ctx.$(recordingsAndTranscriptions)
           ?.children(".phoneticTranscription")
           .children("a")
           .children("img")
           .attr("src"),
-        recordings: getRecordings($, recordingsAndTranscriptions, request_url),
+        recordings: getRecordings(ctx, recordingsAndTranscriptions),
         additionalInformation: getAdditionalInformation(
-          $,
+          ctx,
           additionalInformation,
         ),
-        lessPopular: $(el).hasClass("hwLessPopularAlternative"),
+        lessPopular: ctx.$(el).hasClass("hwLessPopularAlternative"),
       };
       return hw;
     })
@@ -183,60 +179,59 @@ function getHws(
 }
 
 function getExampleSentences(
-  $: CheerioAPI,
+  ctx: CheerioCrawlingContext,
   element: BasicAcceptedElems<AnyNode> | undefined,
-  request_url: string,
 ): IExampleSentence[] {
-  return $(element)
+  return ctx
+    .$(element)
     .children(".exampleSentence")
     .map((_, el) => {
-      const translation = $(el)
+      const translation = ctx.$(el)
         .children(".exampleSentenceTranslation")
         .text()
         .trim();
-      const recordings = $(el)
+      const recordings = ctx.$(el)
         .children(".recordingsAndTranscriptions");
       return {
-        sentence: getTextNodes($, el),
+        sentence: getTextNodes(ctx, el),
         translation: removeBrackets(translation),
-        recordings: getRecordings($, recordings, request_url),
+        recordings: getRecordings(ctx, recordings),
       };
     })
     .get()
 }
 
 function getMeanings(
-  $: CheerioAPI,
+  ctx: CheerioCrawlingContext,
   el: BasicAcceptedElems<AnyNode> | undefined,
-  request_url: string,
 ): IMeaning[] {
-  return $(el)
+  return ctx.$(el)
     .nextAll(".foreignToNativeMeanings")
     .children("li")
     .map((_, el) => {
-      const additionalInformation = $(el)
+      const additionalInformation = ctx.$(el)
         .children(".meaningAdditionalInformation")
         .get(0);
       const meaning: IMeaning = {
-        hws: $(el)
+        hws: ctx.$(el)
           .children(".hw")
-          .map((_, el) => $(el).text().trim())
+          .map((_, el) => ctx.$(el).text().trim())
           .toArray(),
-        grammarTags: $(el)
+        grammarTags: ctx.$(el)
           .children(".grammarTag")
           .map((_, el) => {
-            const t = $(el).text();
+            const t = ctx.$(el).text();
             return removeBrackets(t);
           })
           .toArray(),
         additionalInformation: getAdditionalInformation(
-          $,
+          ctx,
           additionalInformation,
         ),
-        exampleSentences: getExampleSentences($, el, request_url),
-        thematicDictionary: $(el).children(".cat").text().trim(),
-        note: getNote($, el),
-        refs: getRefs($, el, request_url),
+        exampleSentences: getExampleSentences(ctx, el),
+        thematicDictionary: ctx.$(el).children(".cat").text().trim(),
+        note: getNote(ctx, el),
+        refs: getRefs(ctx, el),
       };
       return meaning;
     })
@@ -244,31 +239,30 @@ function getMeanings(
 }
 
 function getMeaningGroups(
-  $: CheerioAPI,
-  el: BasicAcceptedElems<AnyNode> | undefined,
-  request_url: string,
+  ctx: CheerioCrawlingContext,
+  el: BasicAcceptedElems<AnyNode> | undefined
 ): IMeaningGroup[] {
-  return $(el)
+  return ctx.$(el)
     .children(".partOfSpeechSectionHeader")
     .map((_, el) => {
       const meaningGroup: IMeaningGroup = {
-        partOfSpeech: $(el).children(".partOfSpeech").text(),
-        meanings: getMeanings($, el, request_url),
+        partOfSpeech: ctx.$(el).children(".partOfSpeech").text(),
+        meanings: getMeanings(ctx, el),
       };
       return meaningGroup;
     })
     .toArray();
 }
-router.addHandler("detail", async ({ $, pushData, request, log }) => {
-  const dictionaryEntities = $("div .diki-results-left-column")
+router.addHandler("detail", async (ctx) => {
+  const dictionaryEntities = ctx.$("div .diki-results-left-column")
     .children("div")
     .children("div .dictionaryEntity");
   dictionaryEntities.each((_, el) => {
     const entity: IEntity = {
-      hws: getHws($, $(el).children(".hws").get(0), request.url),
-      meaningGroups: getMeaningGroups($, el, request.url),
-      note: getNote($, $(el).children(".hws").get(0)),
+      hws: getHws(ctx, ctx.$(el).children(".hws").get(0)),
+      meaningGroups: getMeaningGroups(ctx, el),
+      note: getNote(ctx, ctx.$(el).children(".hws").get(0)),
     };
-    pushData({ entity });
+    ctx.pushData({ entity });
   });
 });
