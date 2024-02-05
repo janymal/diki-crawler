@@ -128,120 +128,147 @@ function getNote(
   return getTextNodes($, noteElement);
 }
 
+function getRefs(
+  $: CheerioAPI,
+  el: BasicAcceptedElems<AnyNode> | undefined,
+  request_url: string,
+): IRef[] {
+  return $(el)
+    .children(".ref")
+    .children("div")
+    .children("a")
+    .map((_, el) => {
+      const recordings = $(el).nextAll(".recordingsAndTranscriptions").get(0);
+      return {
+        word: $(el).text(),
+        type: getTextNodes($, $(el).parent().get(0)).split(":")[0],
+        recordings: getRecordings($, recordings, request_url),
+      };
+    })
+    .toArray();
+}
+
+function getHws(
+  $: CheerioAPI,
+  el: BasicAcceptedElems<AnyNode> | undefined,
+  request_url: string,
+): IHw[] {
+  return $(el)
+    .children("h1")
+    .children(".hw")
+    .map((_, el) => {
+      const additionalInformation = $(el)
+        .nextAll(".dictionaryEntryHeaderAdditionalInformation")
+        .get(0);
+      const recordingsAndTranscriptions = $(el)
+        .nextAll(".recordingsAndTranscriptions")
+        .get(0);
+      const hw: IHw = {
+        title: $(el).text().trim(),
+        transcription: $(recordingsAndTranscriptions)
+          ?.children(".phoneticTranscription")
+          .children("a")
+          .children("img")
+          .attr("src"),
+        recordings: getRecordings($, recordingsAndTranscriptions, request_url),
+        additionalInformation: getAdditionalInformation(
+          $,
+          additionalInformation,
+        ),
+        lessPopular: $(el).hasClass("hwLessPopularAlternative"),
+      };
+      return hw;
+    })
+    .toArray();
+}
+
+function getExampleSentences(
+  $: CheerioAPI,
+  element: BasicAcceptedElems<AnyNode> | undefined,
+  request_url: string,
+): IExampleSentence[] {
+  return $(element)
+    .children(".exampleSentence")
+    .map((_, el) => {
+      const translation = $(el)
+        .children(".exampleSentenceTranslation")
+        .text()
+        .trim();
+      const recordings = $(el)
+        .children(".recordingsAndTranscriptions");
+      return {
+        sentence: getTextNodes($, el),
+        translation: removeBrackets(translation),
+        recordings: getRecordings($, recordings, request_url),
+      };
+    })
+    .get()
+}
+
+function getMeanings(
+  $: CheerioAPI,
+  el: BasicAcceptedElems<AnyNode> | undefined,
+  request_url: string,
+): IMeaning[] {
+  return $(el)
+    .nextAll(".foreignToNativeMeanings")
+    .children("li")
+    .map((_, el) => {
+      const additionalInformation = $(el)
+        .children(".meaningAdditionalInformation")
+        .get(0);
+      const meaning: IMeaning = {
+        hws: $(el)
+          .children(".hw")
+          .map((_, el) => $(el).text().trim())
+          .toArray(),
+        grammarTags: $(el)
+          .children(".grammarTag")
+          .map((_, el) => {
+            const t = $(el).text();
+            return removeBrackets(t);
+          })
+          .toArray(),
+        additionalInformation: getAdditionalInformation(
+          $,
+          additionalInformation,
+        ),
+        exampleSentences: getExampleSentences($, el, request_url),
+        thematicDictionary: $(el).children(".cat").text().trim(),
+        note: getNote($, el),
+        refs: getRefs($, el, request_url),
+      };
+      return meaning;
+    })
+    .toArray();
+}
+
+function getMeaningGroups(
+  $: CheerioAPI,
+  el: BasicAcceptedElems<AnyNode> | undefined,
+  request_url: string,
+): IMeaningGroup[] {
+  return $(el)
+    .children(".partOfSpeechSectionHeader")
+    .map((_, el) => {
+      const meaningGroup: IMeaningGroup = {
+        partOfSpeech: $(el).children(".partOfSpeech").text(),
+        meanings: getMeanings($, el, request_url),
+      };
+      return meaningGroup;
+    })
+    .toArray();
+}
 router.addHandler("detail", async ({ $, pushData, request, log }) => {
   const dictionaryEntities = $("div .diki-results-left-column")
     .children("div")
     .children("div .dictionaryEntity");
   dictionaryEntities.each((_, el) => {
     const entity: IEntity = {
-      hws: [],
-      meaningGroups: [],
+      hws: getHws($, $(el).children(".hws").get(0), request.url),
+      meaningGroups: getMeaningGroups($, el, request.url),
       note: getNote($, $(el).children(".hws").get(0)),
     };
-    $(el)
-      .children(".hws")
-      .children("h1")
-      .each((_, el) => {
-        $(el)
-          .children(".hw")
-          .each((_, el) => {
-            const additionalInformation = $(el)
-              .nextAll(".dictionaryEntryHeaderAdditionalInformation")
-              .get(0);
-            const recordingsAndTranscriptions = $(el)
-              .nextAll(".recordingsAndTranscriptions")
-              .get(0);
-            const hw: IHw = {
-              title: $(el).text().trim(),
-              transcription: $(recordingsAndTranscriptions)
-                ?.children(".phoneticTranscription")
-                .children("a")
-                .children("img")
-                .attr("src"),
-              recordings: getRecordings(
-                $,
-                recordingsAndTranscriptions,
-                request.url,
-              ),
-              additionalInformation: getAdditionalInformation(
-                $,
-                additionalInformation,
-              ),
-              lessPopular: $(el).hasClass("hwLessPopularAlternative"),
-            };
-            entity.hws.push(hw);
-          });
-      });
-    $(el)
-      .children(".partOfSpeechSectionHeader")
-      .each((_, el) => {
-        const meaningGroup: IMeaningGroup = {
-          partOfSpeech: $(el).children(".partOfSpeech").text(),
-          meanings: [],
-        };
-        $(el)
-          .nextAll(".foreignToNativeMeanings")
-          .children("li")
-          .each((_, el) => {
-            const additionalInformation = $(el)
-              .children(".meaningAdditionalInformation")
-              .get(0);
-            const meaning: IMeaning = {
-              hws: $(el)
-                .children(".hw")
-                .map((_, el) => $(el).text().trim())
-                .toArray(),
-              grammarTags: $(el)
-                .children(".grammarTag")
-                .map((_, el) => {
-                  const t = $(el).text();
-                  return removeBrackets(t);
-                })
-                .toArray(),
-              additionalInformation: getAdditionalInformation(
-                $,
-                additionalInformation,
-              ),
-              exampleSentences: $(el)
-                .children(".exampleSentence")
-                .map((_, el) => {
-                  const translation = $(el)
-                    .children(".exampleSentenceTranslation")
-                    .text()
-                    .trim();
-                  const recordings = $(el)
-                    .children(".recordingsAndTranscriptions")
-                    .get(0);
-                  return {
-                    sentence: getTextNodes($, el),
-                    translation: removeBrackets(translation),
-                    recordings: getRecordings($, recordings, request.url),
-                  };
-                })
-                .toArray(),
-              thematicDictionary: $(el).children(".cat").text().trim(),
-              note: getNote($, el),
-              refs: $(el)
-                .children(".ref")
-                .children("div")
-                .children("a")
-                .map((_, el) => {
-                  const recordings = $(el)
-                    .nextAll(".recordingsAndTranscriptions")
-                    .get(0);
-                  return {
-                    word: $(el).text(),
-                    type: getTextNodes($, $(el).parent().get(0)).split(":")[0],
-                    recordings: getRecordings($, recordings, request.url),
-                  };
-                })
-                .toArray(),
-            };
-
-            meaningGroup.meanings.push(meaning);
-          });
-        entity.meaningGroups.push(meaningGroup);
-      });
     pushData({ entity });
   });
 });
