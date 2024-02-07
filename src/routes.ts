@@ -102,7 +102,7 @@ function getAdditionalInformation(
 }
 
 function removeBrackets(str: string): string {
-  return str.substring(1, str.length - 1);
+  return str.slice(1, -1);
 }
 
 function getTextNodes(element: Cheerio<Element>): string {
