@@ -82,25 +82,23 @@ function getAdditionalInformation(
   ctx: CheerioCrawlingContext,
   element: Cheerio<Element>,
 ): IAdditionalInformation {
-  let popularity = undefined;
-  let variety = undefined;
-  let register = undefined;
-  element
-    .children()
-    .each((_, el) => {
-      if (ctx.$(el).hasClass("starsForNumOccurrences"))
-        popularity = ctx.$(el).text().length;
-      else if (ctx.$(el).hasClass("languageVariety"))
-        variety = ctx.$(el).text();
-      else if (ctx.$(el).hasClass("languageRegister"))
-        register = ctx.$(el).text();
-    });
-  return {
-    languageVariety: variety,
-    languageRegister: register,
-    popularity: popularity,
-    other: removeBrackets(getTextNodes(element)).split(","),
-  };
+  const ret: IAdditionalInformation = {};
+  const languageRegister: string[] = [];
+  element.children().each((_, el) => {
+    if (ctx.$(el).hasClass("starsForNumOccurrences"))
+      ret.popularity = ctx.$(el).text().length;
+    else if (ctx.$(el).hasClass("languageVariety"))
+      ret.languageVariety = ctx.$(el).text();
+    else if (ctx.$(el).hasClass("languageRegister"))
+      languageRegister.push(ctx.$(el).text());
+    else
+      ctx.log.warning(
+        `Unknown field in the Additional Information section: ${ctx.$(el).html()}`,
+      );
+  });
+  ret.other = removeBrackets(getTextNodes(element)).split(",");
+  ret.languageRegister = languageRegister;
+  return ret;
 }
 
 function removeBrackets(str: string): string {
