@@ -22,7 +22,7 @@ interface IHw {
   title: string;
   transcription?: string;
   recordings?: IRecording[];
-  additionalInformation: IAdditionalInformation;
+  additionalInformation?: IAdditionalInformation;
   lessPopular: boolean;
 }
 
@@ -40,9 +40,9 @@ interface IAdditionalInformation {
 
 interface IMeaning {
   hws: string[];
-  additionalInformation: IAdditionalInformation;
+  additionalInformation?: IAdditionalInformation;
   grammarTags?: string[];
-  exampleSentences: IExampleSentence[];
+  exampleSentences?: IExampleSentence[];
   thematicDictionary?: string;
   note?: string;
   refs?: IRef[];
@@ -57,7 +57,7 @@ interface IRef {
 interface IExampleSentence {
   sentence: string;
   translation: string;
-  recordings: IRecording[];
+  recordings?: IRecording[];
 }
 
 function getRecordings(
