@@ -121,7 +121,7 @@ function getNote(element: Cheerio<Element>): string {
 function getRefs(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IRef[] {
   return element
     .children(".ref")
-    .children("div")
+    .children()
     .children("a")
     .map((_, el) => {
       return {
@@ -241,9 +241,12 @@ function getMeaningGroups(
 }
 router.addHandler("detail", async (ctx) => {
   const dictionaryEntities = ctx
-    .$("div .diki-results-left-column")
-    .children("div")
-    .children("div .dictionaryEntity");
+    .$("#en-pl")
+    .parent()
+    .next(".diki-results-container")
+    .children(".diki-results-left-column")
+    .children()
+    .children(".dictionaryEntity");
   dictionaryEntities.each((_, el) => {
     const entity: IEntity = {
       hws: getHws(ctx, ctx.$(el).children(".hws")),
