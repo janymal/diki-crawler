@@ -110,9 +110,7 @@ function removeBrackets(str: string): string {
 function getTextNodes(element: Cheerio<Element>): string {
   return element
     .contents()
-    .filter(function () {
-      return this.nodeType == 3;
-    })
+    .filter((_, node) => node.nodeType == 3)
     .text()
     .trim();
 }
