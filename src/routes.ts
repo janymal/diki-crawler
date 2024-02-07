@@ -206,7 +206,7 @@ function getMeanings(
         hws: ctx
           .$(el)
           .children(".hw")
-          .map((_, el) => ctx.$(el).text().trim())
+          .map((_, el) => ctx.$(el).text())
           .get(),
         grammarTags: ctx
           .$(el)
