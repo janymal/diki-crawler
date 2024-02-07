@@ -128,11 +128,13 @@ function getRefs(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IRef[]
     .children("div")
     .children("a")
     .map((_, el) => {
-      const recordings = ctx.$(el).nextAll(".recordingsAndTranscriptions");
       return {
         word: ctx.$(el).text(),
         type: getTextNodes(ctx.$(el).parent()).split(":")[0],
-        recordings: getRecordings(ctx, recordings),
+        recordings: getRecordings(
+          ctx,
+          ctx.$(el).nextAll(".recordingsAndTranscriptions"),
+        ),
       };
     })
     .toArray();
@@ -151,7 +153,7 @@ function getHws(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IHw[] {
         .$(el)
         .nextAll(".recordingsAndTranscriptions")
         .first();
-      const hw: IHw = {
+      return {
         title: ctx.$(el).text().trim(),
         transcription: ctx
           .$(recordingsAndTranscriptions)
@@ -166,7 +168,6 @@ function getHws(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IHw[] {
         ),
         lessPopular: ctx.$(el).hasClass("hwLessPopularAlternative"),
       };
-      return hw;
     })
     .toArray();
 }
@@ -205,7 +206,7 @@ function getMeanings(
       const additionalInformation = ctx
         .$(el)
         .children(".meaningAdditionalInformation");
-      const meaning: IMeaning = {
+      return {
         hws: ctx
           .$(el)
           .children(".hw")
@@ -214,10 +215,7 @@ function getMeanings(
         grammarTags: ctx
           .$(el)
           .children(".grammarTag")
-          .map((_, el) => {
-            const t = ctx.$(el).text();
-            return removeBrackets(t);
-          })
+          .map((_, el) => removeBrackets(ctx.$(el).text()))
           .toArray(),
         additionalInformation: getAdditionalInformation(
           ctx,
@@ -228,7 +226,6 @@ function getMeanings(
         note: getNote(ctx.$(el)),
         refs: getRefs(ctx, ctx.$(el)),
       };
-      return meaning;
     })
     .toArray();
 }
@@ -240,11 +237,10 @@ function getMeaningGroups(
   return element
     .children(".partOfSpeechSectionHeader")
     .map((_, el) => {
-      const meaningGroup: IMeaningGroup = {
+      return {
         partOfSpeech: ctx.$(el).children(".partOfSpeech").text(),
         meanings: getMeanings(ctx, ctx.$(el)),
       };
-      return meaningGroup;
     })
     .toArray();
 }
