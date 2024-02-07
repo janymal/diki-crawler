@@ -170,10 +170,9 @@ function getHws(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IHw[] {
 
 function getExampleSentences(
   ctx: CheerioCrawlingContext,
-  element: Cheerio<Element> | undefined,
+  element: Cheerio<Element>,
 ): IExampleSentence[] {
-  return ctx
-    .$(element)
+  return element
     .children(".exampleSentence")
     .map((_, el) => {
       const translation = ctx.$(el)
