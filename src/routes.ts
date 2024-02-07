@@ -75,7 +75,7 @@ function getRecordings(
         ),
       };
     })
-    .toArray();
+    .get();
 }
 
 function getAdditionalInformation(
@@ -135,7 +135,7 @@ function getRefs(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IRef[]
         ),
       };
     })
-    .toArray();
+    .get();
 }
 
 function getHws(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IHw[] {
@@ -167,7 +167,7 @@ function getHws(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IHw[] {
         lessPopular: ctx.$(el).hasClass("hwLessPopularAlternative"),
       };
     })
-    .toArray();
+    .get();
 }
 
 function getExampleSentences(
@@ -209,12 +209,12 @@ function getMeanings(
           .$(el)
           .children(".hw")
           .map((_, el) => ctx.$(el).text().trim())
-          .toArray(),
+          .get(),
         grammarTags: ctx
           .$(el)
           .children(".grammarTag")
           .map((_, el) => removeBrackets(ctx.$(el).text()))
-          .toArray(),
+          .get(),
         additionalInformation: getAdditionalInformation(
           ctx,
           additionalInformation,
@@ -225,7 +225,7 @@ function getMeanings(
         refs: getRefs(ctx, ctx.$(el)),
       };
     })
-    .toArray();
+    .get();
 }
 
 function getMeaningGroups(
@@ -240,7 +240,7 @@ function getMeaningGroups(
         meanings: getMeanings(ctx, ctx.$(el)),
       };
     })
-    .toArray();
+    .get();
 }
 router.addHandler("detail", async (ctx) => {
   const dictionaryEntities = ctx
