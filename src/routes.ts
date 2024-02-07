@@ -1,8 +1,8 @@
 import { createCheerioRouter, type CheerioCrawlingContext } from "crawlee";
 import url from "url";
 import type {
-  BasicAcceptedElems,
-  AnyNode,
+  Cheerio,
+  Element,
 } from "cheerio" with { "resolution-mode": "require" };
 
 export const router = createCheerioRouter();
@@ -62,9 +62,9 @@ interface IExampleSentence {
 
 function getRecordings(
   ctx: CheerioCrawlingContext,
-  element: BasicAcceptedElems<AnyNode> | undefined,
+  element: Cheerio<Element>,
 ): IRecording[] {
-  return ctx.$(element)
+  return element
     ?.children(".hasRecording")
     .map((_, el) => {
       return {
@@ -80,24 +80,26 @@ function getRecordings(
 
 function getAdditionalInformation(
   ctx: CheerioCrawlingContext,
-  element: BasicAcceptedElems<AnyNode> | undefined,
+  element: Cheerio<Element>,
 ): IAdditionalInformation {
   let popularity = undefined;
   let variety = undefined;
   let register = undefined;
-  ctx.$(element)
+  element
     .children()
     .each((_, el) => {
       if (ctx.$(el).hasClass("starsForNumOccurrences"))
         popularity = ctx.$(el).text().length;
-      else if (ctx.$(el).hasClass("languageVariety")) variety = ctx.$(el).text();
-      else if (ctx.$(el).hasClass("languageRegister")) register = ctx.$(el).text();
+      else if (ctx.$(el).hasClass("languageVariety"))
+        variety = ctx.$(el).text();
+      else if (ctx.$(el).hasClass("languageRegister"))
+        register = ctx.$(el).text();
     });
   return {
     languageVariety: variety,
     languageRegister: register,
     popularity: popularity,
-    other: removeBrackets(getTextNodes(ctx, element)).split(","),
+    other: removeBrackets(getTextNodes(element)).split(","),
   };
 }
 
@@ -105,11 +107,8 @@ function removeBrackets(str: string): string {
   return str.substring(1, str.length - 1);
 }
 
-function getTextNodes(
-  ctx: CheerioCrawlingContext,
-  element: BasicAcceptedElems<AnyNode> | undefined,
-): string {
-  return ctx.$(element)
+function getTextNodes(element: Cheerio<Element>): string {
+  return element
     .contents()
     .filter(function () {
       return this.nodeType == 3;
@@ -118,50 +117,44 @@ function getTextNodes(
     .trim();
 }
 
-function getNote(
-  ctx: CheerioCrawlingContext,
-  el: BasicAcceptedElems<AnyNode> | undefined,
-): string {
-  const noteElement = ctx.$(el).children(".nt").get(0);
-  return getTextNodes(ctx, noteElement);
+function getNote(element: Cheerio<Element>): string {
+  const noteElement = element.children(".nt");
+  return getTextNodes(noteElement);
 }
 
-function getRefs(
-  ctx: CheerioCrawlingContext,
-  el: BasicAcceptedElems<AnyNode> | undefined,
-): IRef[] {
-  return ctx.$(el)
+function getRefs(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IRef[] {
+  return element
     .children(".ref")
     .children("div")
     .children("a")
     .map((_, el) => {
-      const recordings = ctx.$(el).nextAll(".recordingsAndTranscriptions").get(0);
+      const recordings = ctx.$(el).nextAll(".recordingsAndTranscriptions");
       return {
         word: ctx.$(el).text(),
-        type: getTextNodes(ctx, ctx.$(el).parent().get(0)).split(":")[0],
+        type: getTextNodes(ctx.$(el).parent()).split(":")[0],
         recordings: getRecordings(ctx, recordings),
       };
     })
     .toArray();
 }
 
-function getHws(
-  ctx: CheerioCrawlingContext,
-  el: BasicAcceptedElems<AnyNode> | undefined,
-): IHw[] {
-  return ctx.$(el)
+function getHws(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IHw[] {
+  return element
     .children("h1")
     .children(".hw")
     .map((_, el) => {
-      const additionalInformation = ctx.$(el)
+      const additionalInformation = ctx
+        .$(el)
         .nextAll(".dictionaryEntryHeaderAdditionalInformation")
-        .get(0);
-      const recordingsAndTranscriptions = ctx.$(el)
+        .first();
+      const recordingsAndTranscriptions = ctx
+        .$(el)
         .nextAll(".recordingsAndTranscriptions")
-        .get(0);
+        .first();
       const hw: IHw = {
         title: ctx.$(el).text().trim(),
-        transcription: ctx.$(recordingsAndTranscriptions)
+        transcription: ctx
+          .$(recordingsAndTranscriptions)
           ?.children(".phoneticTranscription")
           .children("a")
           .children("img")
@@ -180,7 +173,7 @@ function getHws(
 
 function getExampleSentences(
   ctx: CheerioCrawlingContext,
-  element: BasicAcceptedElems<AnyNode> | undefined,
+  element: Cheerio<Element> | undefined,
 ): IExampleSentence[] {
   return ctx
     .$(element)
@@ -193,7 +186,7 @@ function getExampleSentences(
       const recordings = ctx.$(el)
         .children(".recordingsAndTranscriptions");
       return {
-        sentence: getTextNodes(ctx, el),
+        sentence: getTextNodes(ctx.$(el)),
         translation: removeBrackets(translation),
         recordings: getRecordings(ctx, recordings),
       };
@@ -203,21 +196,23 @@ function getExampleSentences(
 
 function getMeanings(
   ctx: CheerioCrawlingContext,
-  el: BasicAcceptedElems<AnyNode> | undefined,
+  element: Cheerio<Element>,
 ): IMeaning[] {
-  return ctx.$(el)
+  return element
     .nextAll(".foreignToNativeMeanings")
     .children("li")
     .map((_, el) => {
-      const additionalInformation = ctx.$(el)
-        .children(".meaningAdditionalInformation")
-        .get(0);
+      const additionalInformation = ctx
+        .$(el)
+        .children(".meaningAdditionalInformation");
       const meaning: IMeaning = {
-        hws: ctx.$(el)
+        hws: ctx
+          .$(el)
           .children(".hw")
           .map((_, el) => ctx.$(el).text().trim())
           .toArray(),
-        grammarTags: ctx.$(el)
+        grammarTags: ctx
+          .$(el)
           .children(".grammarTag")
           .map((_, el) => {
             const t = ctx.$(el).text();
@@ -228,10 +223,10 @@ function getMeanings(
           ctx,
           additionalInformation,
         ),
-        exampleSentences: getExampleSentences(ctx, el),
+        exampleSentences: getExampleSentences(ctx, ctx.$(el)),
         thematicDictionary: ctx.$(el).children(".cat").text().trim(),
-        note: getNote(ctx, el),
-        refs: getRefs(ctx, el),
+        note: getNote(ctx.$(el)),
+        refs: getRefs(ctx, ctx.$(el)),
       };
       return meaning;
     })
@@ -240,28 +235,29 @@ function getMeanings(
 
 function getMeaningGroups(
   ctx: CheerioCrawlingContext,
-  el: BasicAcceptedElems<AnyNode> | undefined
+  element: Cheerio<Element>,
 ): IMeaningGroup[] {
-  return ctx.$(el)
+  return element
     .children(".partOfSpeechSectionHeader")
     .map((_, el) => {
       const meaningGroup: IMeaningGroup = {
         partOfSpeech: ctx.$(el).children(".partOfSpeech").text(),
-        meanings: getMeanings(ctx, el),
+        meanings: getMeanings(ctx, ctx.$(el)),
       };
       return meaningGroup;
     })
     .toArray();
 }
 router.addHandler("detail", async (ctx) => {
-  const dictionaryEntities = ctx.$("div .diki-results-left-column")
+  const dictionaryEntities = ctx
+    .$("div .diki-results-left-column")
     .children("div")
     .children("div .dictionaryEntity");
   dictionaryEntities.each((_, el) => {
     const entity: IEntity = {
-      hws: getHws(ctx, ctx.$(el).children(".hws").get(0)),
-      meaningGroups: getMeaningGroups(ctx, el),
-      note: getNote(ctx, ctx.$(el).children(".hws").get(0)),
+      hws: getHws(ctx, ctx.$(el).children(".hws")),
+      meaningGroups: getMeaningGroups(ctx, ctx.$(el)),
+      note: getNote(ctx.$(el).children(".hws")),
     };
     ctx.pushData({ entity });
   });
