@@ -20,7 +20,6 @@ export default [
     files: ["src/**.ts"],
     rules: {
       "unicorn/prevent-abbreviations": 0,
-      "sort-imports": 1,
       "eqeqeq": 2,
     },
   },

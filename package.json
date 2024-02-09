@@ -12,6 +12,7 @@
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
+    "dprint": "^0.45.0",
     "eslint": "^8.56.0",
     "eslint-plugin-unicorn": "^51.0.1",
     "tsx": "^4.4.0",
@@ -22,7 +23,8 @@
     "start:prod": "node dist/main.js",
     "start:dev": "tsx src/main.ts",
     "build": "tsc",
-    "test": "eslint ."
+    "lint": "eslint .",
+    "format": "dprint fmt"
   },
   "author": "It's not you it's me",
   "license": "ISC"

@@ -1,0 +1,20 @@
+{
+  "typescript": {
+    "arrowFunction.useParentheses": "force",
+    "bracePosition": "nextLine",
+    "enumDeclaration.memberSpacing": "newLine",
+    "memberExpression.linePerExpression": true,
+    "operatorPosition": "sameLine",
+    "preferSingleLine": true,
+    "quoteProps": "asNeeded",
+    "singleBodyPosition": "nextLine",
+    "typeLiteral.separatorKind": "comma",
+    "useBraces": "preferNone",
+  },
+  "includes": [
+    "src/**.ts"
+  ],
+  "plugins": [
+    "https://plugins.dprint.dev/typescript-0.89.0.wasm"
+  ]
+}
