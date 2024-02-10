@@ -1,288 +1,403 @@
-import type { Cheerio, Element } from "cheerio" with {
+import type { AnyNode, Cheerio } from "cheerio" with {
   "resolution-mode": "require",
 };
 import { type CheerioCrawlingContext, createCheerioRouter } from "crawlee";
-import url from "url";
+import { URL } from "node:url";
 
 export const router = createCheerioRouter();
 
-interface IEntity
+const removeBrackets = (str: string) => str.slice(1, -1);
+const getTextNodes = (element: Cheerio<AnyNode>) =>
+  element.contents().filter((_, node) => node.nodeType === 3);
+const parseNote = (element: Cheerio<AnyNode>) =>
+  getTextNodes(element.children(".nt")).text().trim();
+
+type Mutable<T> = { -readonly [key in keyof T]: T[key] };
+
+abstract class Parsable
 {
-  hws: IHw[];
-  meaningGroups: IMeaningGroup[];
-  note?: string;
+  static parse: (
+    context: CheerioCrawlingContext,
+    section: Cheerio<AnyNode>,
+  ) => Parsable;
 }
 
-interface IRecording
+class Recording implements Parsable
 {
-  url: string;
-  lang: string;
-}
+  constructor(readonly url: URL, readonly lang: string)
+  {}
 
-interface IHw
-{
-  title: string;
-  transcription?: string;
-  recordings?: IRecording[];
-  additionalInformation?: IAdditionalInformation;
-  lessPopular: boolean;
-}
-
-interface IMeaningGroup
-{
-  partOfSpeech: string;
-  meanings: IMeaning[];
-}
-
-interface IAdditionalInformation
-{
-  languageVariety?: string;
-  popularity?: number;
-  languageRegister?: string[];
-  other?: string[];
-}
-
-interface IMeaning
-{
-  hws: string[];
-  additionalInformation?: IAdditionalInformation;
-  grammarTags?: string[];
-  exampleSentences?: IExampleSentence[];
-  thematicDictionary?: string;
-  note?: string;
-  refs?: IRef[];
-}
-
-interface IRef
-{
-  word: string;
-  type: string;
-  recordings?: IRecording[];
-}
-
-interface IExampleSentence
-{
-  sentence: string;
-  translation: string;
-  recordings?: IRecording[];
-}
-
-function getRecordings(
-  ctx: CheerioCrawlingContext,
-  element: Cheerio<Element>,
-): IRecording[]
-{
-  return element
-    ?.children(".hasRecording")
-    .map((_, el) =>
-    {
-      return {
-        lang: ctx.$(el).attr("class")!.split(" ")[0],
-        url: url.resolve(
-          ctx.request.url,
-          ctx
-            .$(el)
-            .children(".soundOnClick")
-            .attr("data-audio-url")!,
-        ),
-      };
-    })
-    .get();
-}
-
-function getAdditionalInformation(
-  ctx: CheerioCrawlingContext,
-  element: Cheerio<Element>,
-): IAdditionalInformation
-{
-  const ret: IAdditionalInformation = {};
-  const languageRegister: string[] = [];
-  element.children().each((_, el) =>
+  static parse(
+    context: CheerioCrawlingContext,
+    recording: Cheerio<AnyNode>,
+  ): Recording
   {
-    if (ctx.$(el).hasClass("starsForNumOccurrences"))
-      ret.popularity = ctx.$(el).text().length;
-    else if (ctx.$(el).hasClass("languageVariety"))
-      ret.languageVariety = ctx.$(el).text();
-    else if (ctx.$(el).hasClass("languageRegister"))
-      languageRegister.push(ctx.$(el).text());
-    else
+    const data: Partial<Mutable<Recording>> = {};
+    data.lang = recording.attr("class")?.split(" ")[0];
+    const audioUrl = recording.children(".soundOnClick").attr("data-audio-url");
+
+    if (typeof data.lang !== "string" || typeof audioUrl !== "string")
+      throw new TypeError();
+
+    data.url = new URL(audioUrl, context.request.url);
+    return new this(data.url, data.lang);
+  }
+}
+
+class RecordingsAndTranscriptions implements Parsable
+{
+  constructor(
+    readonly recordings?: Recording[],
+    readonly transcriptions?: string[],
+  )
+  {}
+
+  static parse(
+    context: CheerioCrawlingContext,
+    recordingsAndTranscriptions: Cheerio<AnyNode>,
+  ): RecordingsAndTranscriptions
+  {
+    const data: Partial<Mutable<RecordingsAndTranscriptions>> = {};
+    recordingsAndTranscriptions.children().each((_, childElement) =>
     {
-      ctx.log.warning(
-        `Unknown field in the Additional Information section: ${
-          ctx.$(el).html()
-        }`,
-      );
-    }
-  });
-  ret.other = removeBrackets(getTextNodes(element)).split(",");
-  ret.languageRegister = languageRegister;
-  return ret;
+      const child = context.$(childElement);
+      if (child.hasClass("hasRecording"))
+      {
+        data.recordings = [
+          ...data.recordings ?? [],
+          Recording.parse(context, child),
+        ];
+      } else if (child.hasClass("phoneticTranscription"))
+      {
+        const url = child.children("a").children("img").attr("src");
+        if (typeof url !== "string")
+          throw new TypeError();
+        data.transcriptions = [...data.transcriptions ?? [], url];
+      }
+    });
+    return new this(data.recordings, data.transcriptions);
+  }
 }
 
-function removeBrackets(str: string): string
+class AdditionalInformation implements Parsable
 {
-  return str.slice(1, -1);
-}
-
-function getTextNodes(element: Cheerio<Element>): string
-{
-  return element.contents().filter((_, node) => node.nodeType == 3).text()
-    .trim();
-}
-
-function getNote(element: Cheerio<Element>): string
-{
-  const noteElement = element.children(".nt");
-  return getTextNodes(noteElement);
-}
-
-function getRefs(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IRef[]
-{
-  return element
-    .children(".ref")
-    .children()
-    .children("a")
-    .map((_, el) =>
+  constructor(
+    readonly languageRegister?: string[],
+    readonly languageVariety?: string,
+    readonly other?: string[],
+    readonly popularity?: number,
+  )
+  {}
+  static parse(
+    context: CheerioCrawlingContext,
+    additionalInformation: Cheerio<AnyNode>,
+  ): AdditionalInformation
+  {
+    const data: Mutable<Partial<AdditionalInformation>> = {};
+    additionalInformation.contents().each((_, childNode) =>
     {
-      return {
-        word: ctx.$(el).text(),
-        type: getTextNodes(ctx.$(el).parent()).split(":")[0],
-        recordings: getRecordings(
-          ctx,
-          ctx.$(el).nextAll(".recordingsAndTranscriptions"),
-        ),
-      };
-    })
-    .get();
+      const child = context.$(childNode);
+      if (child.hasClass("starsForNumOccurrences"))
+        data.popularity = child.text().length;
+      else if (child.hasClass("languageVariety"))
+        data.languageVariety = child.text();
+      else if (child.hasClass("languageRegister"))
+      {
+        data.languageRegister = [
+          ...(data.languageRegister ?? []),
+          child.text(),
+        ];
+      } else if (childNode.nodeType === 3)
+      {
+        data.other = [
+          ...(data.other ?? []),
+          removeBrackets(
+            child
+              .text()
+              .trim(),
+          ),
+        ];
+      } else
+      {
+        context.log.warning(
+          `Unknown field in the Additional Information section: ${child.html()}`,
+        );
+      }
+    });
+    return new this(
+      data.languageRegister,
+      data.languageVariety,
+      data.other,
+      data.popularity,
+    );
+  }
 }
 
-function getHws(ctx: CheerioCrawlingContext, element: Cheerio<Element>): IHw[]
+class ExampleSentence implements Parsable
 {
-  return element
-    .children("h1")
-    .children(".hw")
-    .map((_, el) =>
+  constructor(
+    readonly sentence: string,
+    readonly translation: string,
+    readonly recordingsAndTranscriptions?: RecordingsAndTranscriptions,
+  )
+  {}
+  static parse(
+    context: CheerioCrawlingContext,
+    exampleSentence: Cheerio<AnyNode>,
+  ): ExampleSentence
+  {
+    const data: Partial<Mutable<ExampleSentence>> = {};
+    exampleSentence.contents().each((_, childNode) =>
     {
-      const additionalInformation = ctx
-        .$(el)
-        .nextAll(".dictionaryEntryHeaderAdditionalInformation")
-        .first();
-      const recordingsAndTranscriptions = ctx
-        .$(el)
-        .nextAll(".recordingsAndTranscriptions")
-        .first();
-      return {
-        title: ctx.$(el).text().trim(),
-        transcription: ctx
-          .$(recordingsAndTranscriptions)
-          ?.children(".phoneticTranscription")
-          .children("a")
-          .children("img")
-          .attr("src"),
-        recordings: getRecordings(ctx, recordingsAndTranscriptions),
-        additionalInformation: getAdditionalInformation(
-          ctx,
-          additionalInformation,
-        ),
-        lessPopular: ctx.$(el).hasClass("hwLessPopularAlternative"),
-      };
-    })
-    .get();
+      const child = context.$(childNode);
+      if (childNode.nodeType === 3)
+        data.sentence = child.text();
+      else if (child.hasClass("exampleSentenceTranslation"))
+        data.translation = removeBrackets(child.text().trim());
+      else if (child.hasClass("recordingsAndTranscriptions"))
+      {
+        data.recordingsAndTranscriptions = RecordingsAndTranscriptions.parse(
+          context,
+          exampleSentence.children(".recordingsAndTranscriptions"),
+        );
+      }
+    });
+    data.sentence = getTextNodes(exampleSentence).text().trim();
+    if (typeof data.translation !== "string")
+      throw new TypeError();
+    return new this(
+      data.sentence,
+      data.translation,
+      data.recordingsAndTranscriptions,
+    );
+  }
 }
 
-function getExampleSentences(
-  ctx: CheerioCrawlingContext,
-  element: Cheerio<Element>,
-): IExampleSentence[]
+class RefItem implements Parsable
 {
-  return element
-    .children(".exampleSentence")
-    .map((_, el) =>
-    {
-      const translation = ctx
-        .$(el)
-        .children(".exampleSentenceTranslation")
-        .text()
-        .trim();
-      const recordings = ctx.$(el).children(".recordingsAndTranscriptions");
-      return {
-        sentence: getTextNodes(ctx.$(el)),
-        translation: removeBrackets(translation),
-        recordings: getRecordings(ctx, recordings),
-      };
-    })
-    .get();
+  constructor(
+    readonly word: string,
+    readonly recordingsAndTranscriptions?: RecordingsAndTranscriptions,
+  )
+  {}
+  static parse(
+    context: CheerioCrawlingContext,
+    refItem: Cheerio<AnyNode>,
+  ): RefItem
+  {
+    const data: Partial<Mutable<RefItem>> = {};
+    data.word = refItem.children().first().text();
+    data.recordingsAndTranscriptions = RecordingsAndTranscriptions.parse(
+      context,
+      refItem.children(".recordingsAndTranscriptions"),
+    );
+    return new this(data.word, data.recordingsAndTranscriptions);
+  }
 }
 
-function getMeanings(
-  ctx: CheerioCrawlingContext,
-  element: Cheerio<Element>,
-): IMeaning[]
+class Ref implements Parsable
 {
-  return element
-    .nextAll(".foreignToNativeMeanings")
-    .children("li")
-    .map((_, el) =>
-    {
-      const additionalInformation = ctx.$(el).children(
-        ".meaningAdditionalInformation",
-      );
-      return {
-        hws: ctx
-          .$(el)
-          .children(".hw")
-          .map((_, el) => ctx.$(el).text())
-          .get(),
-        grammarTags: ctx
-          .$(el)
-          .children(".grammarTag")
-          .map((_, el) => removeBrackets(ctx.$(el).text()))
-          .get(),
-        additionalInformation: getAdditionalInformation(
-          ctx,
-          additionalInformation,
-        ),
-        exampleSentences: getExampleSentences(ctx, ctx.$(el)),
-        thematicDictionary: ctx.$(el).children(".cat").text().trim(),
-        note: getNote(ctx.$(el)),
-        refs: getRefs(ctx, ctx.$(el)),
-      };
-    })
-    .get();
+  constructor(readonly type: string, readonly items: RefItem[])
+  {}
+
+  static parse(context: CheerioCrawlingContext, ref: Cheerio<AnyNode>): Ref
+  {
+    const data: Partial<Mutable<Ref>> = {};
+    data.type = getTextNodes(ref.parent()).first().text().trim().slice(0, -1);
+    data.items = ref
+      .children()
+      .children("a")
+      .map((_, refItemWordElement) =>
+      {
+        const refItem = context
+          .$(refItemWordElement)
+          .nextUntil("a")
+          .addBack()
+          .wrapAll("<div></div>")
+          .parent();
+        return RefItem.parse(context, refItem);
+      })
+      .get();
+    return new this(data.type, data.items);
+  }
 }
 
-function getMeaningGroups(
-  ctx: CheerioCrawlingContext,
-  element: Cheerio<Element>,
-): IMeaningGroup[]
+class Meaning implements Parsable
 {
-  return element
-    .children(".partOfSpeechSectionHeader")
-    .map((_, el) =>
-    {
-      return {
-        partOfSpeech: ctx.$(el).children(".partOfSpeech").text(),
-        meanings: getMeanings(ctx, ctx.$(el)),
-      };
-    })
-    .get();
+  constructor(
+    readonly hws: string[],
+    readonly additionalInformation?: AdditionalInformation,
+    readonly grammarTags?: string[],
+    readonly exampleSentences?: ExampleSentence[],
+    readonly thematicDictionary?: string,
+    readonly note?: string,
+    readonly refs?: Ref[],
+  )
+  {}
+
+  static parse(
+    context: CheerioCrawlingContext,
+    meaning: Cheerio<AnyNode>,
+  ): Meaning
+  {
+    const data: Partial<Mutable<Meaning>> = {};
+    data.hws = meaning
+      .children(".hw")
+      .map((_, hwElement) => context.$(hwElement).text())
+      .get(),
+      data.grammarTags = meaning
+        .children(".grammarTag")
+        .map((_, tag) => removeBrackets(context.$(tag).text()))
+        .get();
+    data.additionalInformation = AdditionalInformation.parse(
+      context,
+      meaning.children(".meaningAdditionalInformation"),
+    );
+    data.exampleSentences = meaning
+      .children(".exampleSentence")
+      .map((_, exampleSentenceElement) =>
+        ExampleSentence.parse(context, context.$(exampleSentenceElement))
+      )
+      .get();
+    data.thematicDictionary = meaning.children(".cat").text().trim();
+    data.note = parseNote(meaning);
+    data.refs = meaning
+      .children(".ref")
+      .map((_, refElement) => Ref.parse(context, context.$(refElement)))
+      .get();
+    return new this(
+      data.hws,
+      data.additionalInformation,
+      data.grammarTags,
+      data.exampleSentences,
+      data.thematicDictionary,
+      data.note,
+      data.refs,
+    );
+  }
 }
-router.addHandler("detail", async (ctx) =>
+
+class MeaningGroup implements Parsable
 {
-  const dictionaryEntities = ctx
+  constructor(readonly partOfSpeech: string, readonly meanings: Meaning[])
+  {}
+
+  static parse(
+    context: CheerioCrawlingContext,
+    meaningGroup: Cheerio<AnyNode>,
+  ): MeaningGroup
+  {
+    const data: Partial<Mutable<MeaningGroup>> = {};
+    data.partOfSpeech = meaningGroup
+      .children(".partOfSpeechSectionHeader")
+      .children(".partOfSpeech")
+      .text();
+    data.meanings = meaningGroup
+      .children(".foreignToNativeMeanings")
+      .children("li")
+      .map((_, meaningElement) =>
+        Meaning.parse(context, context.$(meaningElement))
+      )
+      .get();
+    return new this(data.partOfSpeech, data.meanings);
+  }
+}
+
+class Header implements Parsable
+{
+  constructor(
+    readonly title: string,
+    readonly recordingsAndTranscriptions: RecordingsAndTranscriptions,
+    readonly additionalInformation: AdditionalInformation,
+    readonly lessPopular: boolean,
+  )
+  {}
+
+  static parse(
+    context: CheerioCrawlingContext,
+    header: Cheerio<AnyNode>,
+  ): Header
+  {
+    const data: Partial<Mutable<Header>> = {};
+    data.title = header.children().first().text().trim();
+    data.recordingsAndTranscriptions = RecordingsAndTranscriptions.parse(
+      context,
+      header.children(".recordingsAndTranscriptions"),
+    );
+    data.additionalInformation = AdditionalInformation.parse(
+      context,
+      header.children(".dictionaryEntryHeaderAdditionalInformation"),
+    );
+    data.lessPopular = header.hasClass("hwLessPopularAlternative");
+    return new this(
+      data.title,
+      data.recordingsAndTranscriptions,
+      data.additionalInformation,
+      data.lessPopular,
+    );
+  }
+}
+
+class DictionaryEntity implements Parsable
+{
+  constructor(
+    readonly headers: Header[],
+    readonly meaningGroups: MeaningGroup[],
+    readonly note?: string,
+  )
+  {}
+
+  static parse(
+    context: CheerioCrawlingContext,
+    dictionaryEntity: Cheerio<AnyNode>,
+  ): DictionaryEntity
+  {
+    const data: Partial<Mutable<DictionaryEntity>> = {};
+    data.headers = dictionaryEntity
+      .children(".hws")
+      .children("h1")
+      .children(".hw")
+      .map((_, hwElement) =>
+      {
+        const header = context
+          .$(hwElement)
+          .nextUntil(".hw")
+          .addBack()
+          .wrapAll("<div></div>")
+          .parent();
+        return Header.parse(context, header);
+      })
+      .get();
+    data.meaningGroups = dictionaryEntity
+      .children(".partOfSpeechSectionHeader")
+      .map((_, partOfSpeechSectionHeaderElement) =>
+      {
+        const meaningGroup = context
+          .$(partOfSpeechSectionHeaderElement)
+          .nextUntil(".partOfSpeechSectionHeader")
+          .addBack()
+          .wrapAll("<div></div>")
+          .parent();
+        return MeaningGroup.parse(context, meaningGroup);
+      })
+      .get();
+    data.note = dictionaryEntity.children(".hws").children(".nt").text().trim();
+    return new this(data.headers, data.meaningGroups, data.note);
+  }
+}
+
+router.addHandler("detail", async (context) =>
+{
+  context
     .$("#en-pl")
     .parent()
     .next(".diki-results-container")
     .children(".diki-results-left-column")
     .children()
-    .children(".dictionaryEntity");
-  dictionaryEntities.each((_, el) =>
-  {
-    const entity: IEntity = {
-      hws: getHws(ctx, ctx.$(el).children(".hws")),
-      meaningGroups: getMeaningGroups(ctx, ctx.$(el)),
-      note: getNote(ctx.$(el).children(".hws")),
-    };
-    ctx.pushData({ entity });
-  });
+    .children(".dictionaryEntity")
+    .each((_, dictionaryEntityElement) =>
+    {
+      const dictionaryEntity = context.$(dictionaryEntityElement);
+      context.pushData(DictionaryEntity.parse(context, dictionaryEntity));
+    });
 });
