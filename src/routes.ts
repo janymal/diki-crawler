@@ -7,22 +7,10 @@ import { URL } from "node:url";
 export const router = createCheerioRouter();
 
 const removeBrackets = (str: string) => str.slice(1, -1);
-const getTextNodes = (element: Cheerio<AnyNode>) =>
-  element.contents().filter((_, node) => node.nodeType === 3);
-const parseNote = (element: Cheerio<AnyNode>) =>
-  getTextNodes(element.children(".nt")).text().trim();
 
 type Mutable<T> = { -readonly [key in keyof T]: T[key] };
 
-abstract class Parsable
-{
-  static parse: (
-    context: CheerioCrawlingContext,
-    section: Cheerio<AnyNode>,
-  ) => Parsable;
-}
-
-class Recording implements Parsable
+class Recording
 {
   constructor(readonly url: URL, readonly lang: string)
   {}
@@ -36,15 +24,25 @@ class Recording implements Parsable
     data.lang = recording.attr("class")?.split(" ")[0];
     const audioUrl = recording.children(".soundOnClick").attr("data-audio-url");
 
-    if (typeof data.lang !== "string" || typeof audioUrl !== "string")
-      throw new TypeError();
+    if (typeof data.lang !== "string")
+    {
+      throw new TypeError(
+        `Recording.parse(): data.lang is not a string [${data.lang}]`,
+      );
+    }
+    if (typeof audioUrl !== "string")
+    {
+      throw new TypeError(
+        `Recording.parse(): audioUrl is not a string [${audioUrl}]`,
+      );
+    }
 
     data.url = new URL(audioUrl, context.request.url);
     return new this(data.url, data.lang);
   }
 }
 
-class RecordingsAndTranscriptions implements Parsable
+class RecordingsAndTranscriptions
 {
   constructor(
     readonly recordings?: Recording[],
@@ -71,7 +69,11 @@ class RecordingsAndTranscriptions implements Parsable
       {
         const url = child.children("a").children("img").attr("src");
         if (typeof url !== "string")
-          throw new TypeError();
+        {
+          throw new TypeError(
+            `RecordingsAndTranscriptions.parse(): url is not a string [${url}]`,
+          );
+        }
         data.transcriptions = [...data.transcriptions ?? [], url];
       }
     });
@@ -79,7 +81,7 @@ class RecordingsAndTranscriptions implements Parsable
   }
 }
 
-class AdditionalInformation implements Parsable
+class AdditionalInformation
 {
   constructor(
     readonly languageRegister?: string[],
@@ -109,14 +111,9 @@ class AdditionalInformation implements Parsable
         ];
       } else if (childNode.nodeType === 3)
       {
-        data.other = [
-          ...(data.other ?? []),
-          removeBrackets(
-            child
-              .text()
-              .trim(),
-          ),
-        ];
+        const nodeText = removeBrackets(child.text().trim()) || undefined;
+        if (nodeText)
+          data.other = [...data.other ?? [], nodeText];
       } else
       {
         context.log.warning(
@@ -133,7 +130,7 @@ class AdditionalInformation implements Parsable
   }
 }
 
-class ExampleSentence implements Parsable
+class ExampleSentence
 {
   constructor(
     readonly sentence: string,
@@ -151,7 +148,7 @@ class ExampleSentence implements Parsable
     {
       const child = context.$(childNode);
       if (childNode.nodeType === 3)
-        data.sentence = child.text();
+        data.sentence = (data.sentence ?? "").concat(child.text());
       else if (child.hasClass("exampleSentenceTranslation"))
         data.translation = removeBrackets(child.text().trim());
       else if (child.hasClass("recordingsAndTranscriptions"))
@@ -162,9 +159,19 @@ class ExampleSentence implements Parsable
         );
       }
     });
-    data.sentence = getTextNodes(exampleSentence).text().trim();
+    if (typeof data.sentence !== "string")
+    {
+      throw new TypeError(
+        `ExampleSentence.parse(): data.sentence is not a string [${data.sentence}]`,
+      );
+    }
     if (typeof data.translation !== "string")
-      throw new TypeError();
+    {
+      throw new TypeError(
+        `ExampleSentence.parse(): data.translation is not a string [${data.translation}]`,
+      );
+    }
+    data.sentence = data.sentence.trim();
     return new this(
       data.sentence,
       data.translation,
@@ -173,7 +180,7 @@ class ExampleSentence implements Parsable
   }
 }
 
-class RefItem implements Parsable
+class RefItem
 {
   constructor(
     readonly word: string,
@@ -186,16 +193,30 @@ class RefItem implements Parsable
   ): RefItem
   {
     const data: Partial<Mutable<RefItem>> = {};
-    data.word = refItem.children().first().text();
-    data.recordingsAndTranscriptions = RecordingsAndTranscriptions.parse(
-      context,
-      refItem.children(".recordingsAndTranscriptions"),
-    );
+    refItem.children().each((_, childElement) =>
+    {
+      const child = context.$(childElement);
+      if (child.prop("tagName") === "A")
+        data.word = child.text();
+      else if (child.hasClass("recordingsAndTranscriptions"))
+      {
+        data.recordingsAndTranscriptions = RecordingsAndTranscriptions.parse(
+          context,
+          child,
+        );
+      }
+    });
+    if (typeof data.word !== "string")
+    {
+      throw new TypeError(
+        `RefItem.parse(): data.word is not a string [${data.word}]`,
+      );
+    }
     return new this(data.word, data.recordingsAndTranscriptions);
   }
 }
 
-class Ref implements Parsable
+class Ref
 {
   constructor(readonly type: string, readonly items: RefItem[])
   {}
@@ -203,26 +224,35 @@ class Ref implements Parsable
   static parse(context: CheerioCrawlingContext, ref: Cheerio<AnyNode>): Ref
   {
     const data: Partial<Mutable<Ref>> = {};
-    data.type = getTextNodes(ref.parent()).first().text().trim().slice(0, -1);
-    data.items = ref
-      .children()
-      .children("a")
-      .map((_, refItemWordElement) =>
+    ref.children().contents().each((_, childNode) =>
+    {
+      const child = context.$(childNode);
+      if (childNode.nodeType === 3)
+        data.type = (data.type ?? "").concat(child.text());
+      else if (child.prop("tagName") === "A")
       {
-        const refItem = context
-          .$(refItemWordElement)
+        const refItem = child
           .nextUntil("a")
           .addBack()
           .wrapAll("<div></div>")
           .parent();
-        return RefItem.parse(context, refItem);
-      })
-      .get();
+        data.items = [...data.items ?? [], RefItem.parse(context, refItem)];
+      }
+    });
+    if (typeof data.type !== "string")
+    {
+      throw new TypeError(
+        `Ref.parse(): data.type is not a string [${data.type}]`,
+      );
+    }
+    if (data.items === undefined)
+      throw new TypeError(`Ref.parse(): data.items is undefined`);
+    data.type = data.type.trim().slice(0, -1);
     return new this(data.type, data.items);
   }
 }
 
-class Meaning implements Parsable
+class Meaning
 {
   constructor(
     readonly hws: string[],
@@ -241,30 +271,38 @@ class Meaning implements Parsable
   ): Meaning
   {
     const data: Partial<Mutable<Meaning>> = {};
-    data.hws = meaning
-      .children(".hw")
-      .map((_, hwElement) => context.$(hwElement).text())
-      .get(),
-      data.grammarTags = meaning
-        .children(".grammarTag")
-        .map((_, tag) => removeBrackets(context.$(tag).text()))
-        .get();
-    data.additionalInformation = AdditionalInformation.parse(
-      context,
-      meaning.children(".meaningAdditionalInformation"),
-    );
-    data.exampleSentences = meaning
-      .children(".exampleSentence")
-      .map((_, exampleSentenceElement) =>
-        ExampleSentence.parse(context, context.$(exampleSentenceElement))
-      )
-      .get();
-    data.thematicDictionary = meaning.children(".cat").text().trim();
-    data.note = parseNote(meaning);
-    data.refs = meaning
-      .children(".ref")
-      .map((_, refElement) => Ref.parse(context, context.$(refElement)))
-      .get();
+    meaning.children().each((_, childElement) =>
+    {
+      const child = context.$(childElement);
+      if (child.hasClass("hw"))
+        data.hws = [...data.hws ?? [], child.text()];
+      else if (child.hasClass("grammarTag"))
+      {
+        data.grammarTags = [
+          ...data.grammarTags ?? [],
+          removeBrackets(child.text()),
+        ];
+      } else if (child.hasClass("meaningAdditionalInformation"))
+      {
+        data.additionalInformation = AdditionalInformation.parse(
+          context,
+          meaning.children(".meaningAdditionalInformation"),
+        );
+      } else if (child.hasClass("exampleSentence"))
+      {
+        data.exampleSentences = [
+          ...data.exampleSentences ?? [],
+          ExampleSentence.parse(context, child),
+        ];
+      } else if (child.hasClass("cat"))
+        data.thematicDictionary = child.text().trim();
+      else if (child.hasClass("nt"))
+        data.note = child.text().trim();
+      else if (child.hasClass("ref"))
+        data.refs = [...data.refs ?? [], Ref.parse(context, child)];
+    });
+    if (data.hws === undefined)
+      throw new TypeError(`Meaning.parse(): data.hws is undefined`);
     return new this(
       data.hws,
       data.additionalInformation,
@@ -277,7 +315,7 @@ class Meaning implements Parsable
   }
 }
 
-class MeaningGroup implements Parsable
+class MeaningGroup
 {
   constructor(readonly partOfSpeech: string, readonly meanings: Meaning[])
   {}
@@ -288,22 +326,35 @@ class MeaningGroup implements Parsable
   ): MeaningGroup
   {
     const data: Partial<Mutable<MeaningGroup>> = {};
-    data.partOfSpeech = meaningGroup
-      .children(".partOfSpeechSectionHeader")
-      .children(".partOfSpeech")
-      .text();
-    data.meanings = meaningGroup
-      .children(".foreignToNativeMeanings")
-      .children("li")
-      .map((_, meaningElement) =>
-        Meaning.parse(context, context.$(meaningElement))
-      )
-      .get();
+    meaningGroup.children().each((_, childElement) =>
+    {
+      const child = context.$(childElement);
+      if (child.hasClass("partOfSpeechSectionHeader"))
+        data.partOfSpeech = child.children(".partOfSpeech").text();
+      else if (child.hasClass("foreignToNativeMeanings"))
+      {
+        data.meanings = child
+          .children("li")
+          .map((_, meaningElement) =>
+            Meaning.parse(context, context.$(meaningElement))
+          )
+          .get();
+      }
+    });
+    if (typeof data.partOfSpeech !== "string")
+    {
+      throw new TypeError(
+        `MeaningGroup.parse(): data.partOfSpeech is not a string`,
+      );
+    }
+    if (data.meanings === undefined)
+      throw new TypeError(`MeaningGroup.parse(): data.meanings is undefined`);
+
     return new this(data.partOfSpeech, data.meanings);
   }
 }
 
-class Header implements Parsable
+class Header
 {
   constructor(
     readonly title: string,
@@ -319,16 +370,48 @@ class Header implements Parsable
   ): Header
   {
     const data: Partial<Mutable<Header>> = {};
-    data.title = header.children().first().text().trim();
-    data.recordingsAndTranscriptions = RecordingsAndTranscriptions.parse(
-      context,
-      header.children(".recordingsAndTranscriptions"),
-    );
-    data.additionalInformation = AdditionalInformation.parse(
-      context,
-      header.children(".dictionaryEntryHeaderAdditionalInformation"),
-    );
-    data.lessPopular = header.hasClass("hwLessPopularAlternative");
+    header.children().each((_, childElement) =>
+    {
+      const child = context.$(childElement);
+      if (child.hasClass("hw"))
+      {
+        data.title = child.text().trim();
+        data.lessPopular = child.hasClass("hwLessPopularAlternative");
+      } else if (child.hasClass("recordingsAndTranscriptions"))
+      {
+        data.recordingsAndTranscriptions = RecordingsAndTranscriptions.parse(
+          context,
+          child,
+        );
+      } else if (child.hasClass("dictionaryEntryHeaderAdditionalInformation"))
+      {
+        data.additionalInformation = AdditionalInformation.parse(
+          context,
+          child,
+        );
+      }
+    });
+    if (typeof data.title !== "string")
+      throw new TypeError(`Header.parse(): data.title is not a string`);
+    if (data.recordingsAndTranscriptions === undefined)
+    {
+      throw new TypeError(
+        `MeaningGroup.parse(): data.recordingsAndTranscriptions is undefined`,
+      );
+    }
+    if (data.additionalInformation === undefined)
+    {
+      throw new TypeError(
+        `MeaningGroup.parse(): data.additionalInformation is undefined`,
+      );
+    }
+    if (typeof data.lessPopular !== "boolean")
+    {
+      throw new TypeError(
+        `MeaningGroup.parse(): data.lessPopular is not a boolean`,
+      );
+    }
+
     return new this(
       data.title,
       data.recordingsAndTranscriptions,
@@ -338,7 +421,7 @@ class Header implements Parsable
   }
 }
 
-class DictionaryEntity implements Parsable
+class DictionaryEntity
 {
   constructor(
     readonly headers: Header[],
@@ -353,35 +436,54 @@ class DictionaryEntity implements Parsable
   ): DictionaryEntity
   {
     const data: Partial<Mutable<DictionaryEntity>> = {};
-    data.headers = dictionaryEntity
-      .children(".hws")
-      .children("h1")
-      .children(".hw")
-      .map((_, hwElement) =>
+    dictionaryEntity.children().each((_, childElement) =>
+    {
+      const child = context.$(childElement);
+      if (child.hasClass("hws"))
       {
-        const header = context
-          .$(hwElement)
-          .nextUntil(".hw")
-          .addBack()
-          .wrapAll("<div></div>")
-          .parent();
-        return Header.parse(context, header);
-      })
-      .get();
-    data.meaningGroups = dictionaryEntity
-      .children(".partOfSpeechSectionHeader")
-      .map((_, partOfSpeechSectionHeaderElement) =>
+        data.headers = child
+          .children("h1")
+          .children(".hw")
+          .map((_, hwElement) =>
+          {
+            const header = context
+              .$(hwElement)
+              .nextUntil(".hw")
+              .addBack()
+              .wrapAll("<div></div>")
+              .parent();
+            return Header.parse(context, header);
+          })
+          .get();
+        data.note = child.children(".nt").text() || undefined;
+      } else if (child.hasClass("partOfSpeechSectionHeader"))
       {
-        const meaningGroup = context
-          .$(partOfSpeechSectionHeaderElement)
-          .nextUntil(".partOfSpeechSectionHeader")
-          .addBack()
-          .wrapAll("<div></div>")
-          .parent();
-        return MeaningGroup.parse(context, meaningGroup);
-      })
-      .get();
-    data.note = dictionaryEntity.children(".hws").children(".nt").text().trim();
+        data.meaningGroups = child
+          .map((_, partOfSpeechSectionHeaderElement) =>
+          {
+            const meaningGroup = context
+              .$(partOfSpeechSectionHeaderElement)
+              .nextUntil(".partOfSpeechSectionHeader")
+              .addBack()
+              .wrapAll("<div></div>")
+              .parent();
+            return MeaningGroup.parse(context, meaningGroup);
+          })
+          .get();
+      }
+    });
+    if (data.headers === undefined)
+    {
+      throw new TypeError(
+        "DictionaryEntity.parse(): data.headers is undefined",
+      );
+    }
+    if (data.meaningGroups === undefined)
+    {
+      throw new TypeError(
+        "DictionaryEntity.parse(): data.meaningGroups is undefined",
+      );
+    }
     return new this(data.headers, data.meaningGroups, data.note);
   }
 }
