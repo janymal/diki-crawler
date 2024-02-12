@@ -8,8 +8,6 @@ export const router = createCheerioRouter();
 
 type Flexible<T> = { -readonly [key in keyof T]?: T[key] };
 
-const emptyDiv = "<div></div>";
-
 function ensureNonNullable<T>(target: T): NonNullable<T>
 {
   if (target === undefined || target === null)
@@ -17,8 +15,22 @@ function ensureNonNullable<T>(target: T): NonNullable<T>
   return target as NonNullable<T>;
 }
 
+const newDiv = (className: string) => `<div class="${className}"></div>`;
+
+function logUnknownItem(
+  context: CheerioCrawlingContext,
+  item: Cheerio<AnyNode>,
+  sectionName: string,
+)
+{
+  context.log.warning(
+    `Unknown item in the ${sectionName} section: ${item.prop("outerHTML")}`,
+  );
+}
+
 class Recording
 {
+  static name = "Recording";
   constructor(readonly url: URL, readonly lang: string)
   {}
 
@@ -43,6 +55,7 @@ class Recording
 
 class RecordingsAndTranscriptions
 {
+  static name = "Recordings and Transcriptions";
   constructor(
     readonly recordings?: Recording[],
     readonly transcriptions?: URL[],
@@ -82,6 +95,7 @@ class RecordingsAndTranscriptions
 
 class AdditionalInformation
 {
+  static name = "Additional Information";
   constructor(
     readonly languageRegister?: string[],
     readonly languageVariety?: string,
@@ -115,9 +129,7 @@ class AdditionalInformation
           data.other = [...data.other ?? [], nodeText];
       } else
       {
-        context.log.warning(
-          `Unknown field in the Additional Information section: ${child.html()}`,
-        );
+        logUnknownItem(context, child, this.name);
       }
     });
 
@@ -136,6 +148,7 @@ class AdditionalInformation
 
 class ExampleSentence
 {
+  static name = "Example Sentence";
   constructor(
     readonly sentence: string,
     readonly translation: string,
@@ -161,7 +174,10 @@ class ExampleSentence
           context,
           exampleSentence.children(".recordingsAndTranscriptions"),
         );
-      }
+      } else if (child.hasClass("repetitionAddOrRemoveIconAnchor"))
+        return;
+      else
+        logUnknownItem(context, child, this.name);
     });
     return new this(
       ensureNonNullable(data.sentence).trim(),
@@ -173,6 +189,7 @@ class ExampleSentence
 
 class RefItem
 {
+  static name = "Ref Item";
   constructor(
     readonly word: string,
     readonly recordingsAndTranscriptions?: RecordingsAndTranscriptions,
@@ -195,6 +212,9 @@ class RefItem
           context,
           child,
         );
+      } else
+      {
+        logUnknownItem(context, child, this.name);
       }
     });
     return new this(
@@ -206,26 +226,25 @@ class RefItem
 
 class Ref
 {
+  static name = "Ref";
   constructor(readonly type: string, readonly items: RefItem[])
   {}
 
   static parse(context: CheerioCrawlingContext, ref: Cheerio<AnyNode>): Ref
   {
+    ref.children().children("a").nextUntil("a").addBack().wrapAll(
+      newDiv("refItem"),
+    );
     const data: Flexible<Ref> = {};
     ref.children().contents().each((_, childNode) =>
     {
       const child = context.$(childNode);
       if (childNode.nodeType === 3)
         data.type = data.type || child.text().trim().slice(0, -1);
-      else if (child.prop("tagName") === "A")
-      {
-        const refItem = child
-          .nextUntil("a")
-          .addBack()
-          .wrapAll(emptyDiv)
-          .parent();
-        data.items = [...data.items ?? [], RefItem.parse(context, refItem)];
-      }
+      else if (child.hasClass("refItem"))
+        data.items = [...data.items ?? [], RefItem.parse(context, child)];
+      else
+        logUnknownItem(context, child, this.name);
     });
     return new this(
       ensureNonNullable(data.type),
@@ -236,6 +255,7 @@ class Ref
 
 class Meaning
 {
+  static name = "Meaning";
   constructor(
     readonly hws: string[],
     readonly additionalInformation?: AdditionalInformation,
@@ -282,6 +302,10 @@ class Meaning
         data.note = child.text().trim();
       else if (child.hasClass("ref"))
         data.refs = [...data.refs ?? [], Ref.parse(context, child)];
+      else if (child.hasClass("repetitionAddOrRemoveIconAnchor"))
+        return;
+      else
+        logUnknownItem(context, child, this.name);
     });
     return new this(
       ensureNonNullable(data.hws),
@@ -297,6 +321,7 @@ class Meaning
 
 class MeaningGroup
 {
+  static name = "Meaning Group";
   constructor(readonly partOfSpeech: string, readonly meanings: Meaning[])
   {}
 
@@ -319,6 +344,9 @@ class MeaningGroup
             Meaning.parse(context, context.$(meaningElement))
           )
           .get();
+      } else
+      {
+        logUnknownItem(context, child, this.name);
       }
     });
     return new this(
@@ -330,6 +358,7 @@ class MeaningGroup
 
 class Header
 {
+  static name = "Header";
   constructor(
     readonly title: string,
     readonly lessPopular: boolean,
@@ -363,7 +392,10 @@ class Header
           context,
           child,
         );
-      }
+      } else if (child.hasClass("hwcomma") || child.prop("tagName") === "BR")
+        return;
+      else
+        logUnknownItem(context, child, this.name);
     });
 
     return new this(
@@ -377,6 +409,7 @@ class Header
 
 class DictionaryEntity
 {
+  static name = "Dictionary Entity";
   constructor(
     readonly headers: Header[],
     readonly meaningGroups: MeaningGroup[],
@@ -390,6 +423,16 @@ class DictionaryEntity
   ): DictionaryEntity
   {
     const data: Flexible<DictionaryEntity> = {};
+    dictionaryEntity.children(".partOfSpeechSectionHeader").each(
+      (_, partOfSpeechSectionHeaderElement) =>
+      {
+        context
+          .$(partOfSpeechSectionHeaderElement)
+          .nextUntil(".partOfSpeechSectionHeader")
+          .addBack()
+          .wrapAll(newDiv("meaningGroup"));
+      },
+    );
     dictionaryEntity.children().each((_, childElement) =>
     {
       const child = context.$(childElement);
@@ -404,26 +447,21 @@ class DictionaryEntity
               .$(hwElement)
               .nextUntil(".hw")
               .addBack()
-              .wrapAll(emptyDiv)
+              .wrapAll(newDiv("header"))
               .parent();
             return Header.parse(context, header);
           })
           .get();
         data.note = child.children(".nt").text() || undefined;
-      } else if (child.hasClass("partOfSpeechSectionHeader"))
+      } else if (child.hasClass("meaningGroup"))
       {
-        data.meaningGroups = child
-          .map((_, partOfSpeechSectionHeaderElement) =>
-          {
-            const meaningGroup = context
-              .$(partOfSpeechSectionHeaderElement)
-              .nextUntil(".partOfSpeechSectionHeader")
-              .addBack()
-              .wrapAll(emptyDiv)
-              .parent();
-            return MeaningGroup.parse(context, meaningGroup);
-          })
-          .get();
+        data.meaningGroups = [
+          ...data.meaningGroups ?? [],
+          MeaningGroup.parse(context, child),
+        ];
+      } else
+      {
+        logUnknownItem(context, child, this.name);
       }
     });
     return new this(
