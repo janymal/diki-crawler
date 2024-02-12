@@ -474,6 +474,7 @@ class DictionaryEntity
     readonly headers: Header[],
     readonly meaningGroups: MeaningGroup[],
     readonly note?: string,
+    readonly pictures?: URL[],
   )
   {}
 
@@ -519,6 +520,19 @@ class DictionaryEntity
           ...data.meaningGroups ?? [],
           MeaningGroup.parse(context, child),
         ];
+      } else if (child.hasClass("dictpict"))
+      {
+        data.pictures = [
+          ...data.pictures ?? [],
+          new URL(
+            ensureNonNullable(
+              child
+                .children("img")
+                .attr("src"),
+            ),
+            context.request.url,
+          ),
+        ];
       } else
       {
         logUnknownItem(context, child, this.name);
@@ -528,6 +542,7 @@ class DictionaryEntity
       ensureNonNullable(data.headers),
       ensureNonNullable(data.meaningGroups),
       data.note,
+      data.pictures,
     );
   }
 }
