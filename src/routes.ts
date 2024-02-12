@@ -6,9 +6,16 @@ import { URL } from "node:url";
 
 export const router = createCheerioRouter();
 
-const removeBrackets = (str: string) => str.slice(1, -1);
+type Flexible<T> = { -readonly [key in keyof T]?: T[key] };
 
-type Mutable<T> = { -readonly [key in keyof T]: T[key] };
+const emptyDiv = "<div></div>";
+
+function ensureNonNullable<T>(target: T): NonNullable<T>
+{
+  if (target === undefined || target === null)
+    throw new TypeError(`target is undefined or null`);
+  return target as NonNullable<T>;
+}
 
 class Recording
 {
@@ -20,25 +27,17 @@ class Recording
     recording: Cheerio<AnyNode>,
   ): Recording
   {
-    const data: Partial<Mutable<Recording>> = {};
+    const data: Flexible<Recording> = {};
     data.lang = recording.attr("class")?.split(" ")[0];
-    const audioUrl = recording.children(".soundOnClick").attr("data-audio-url");
-
-    if (typeof data.lang !== "string")
-    {
-      throw new TypeError(
-        `Recording.parse(): data.lang is not a string [${data.lang}]`,
-      );
-    }
-    if (typeof audioUrl !== "string")
-    {
-      throw new TypeError(
-        `Recording.parse(): audioUrl is not a string [${audioUrl}]`,
-      );
-    }
-
-    data.url = new URL(audioUrl, context.request.url);
-    return new this(data.url, data.lang);
+    data.url = new URL(
+      ensureNonNullable(
+        recording
+          .children(".soundOnClick")
+          .attr("data-audio-url"),
+      ),
+      context.request.url,
+    );
+    return new this(data.url, ensureNonNullable(data.lang));
   }
 }
 
@@ -46,16 +45,16 @@ class RecordingsAndTranscriptions
 {
   constructor(
     readonly recordings?: Recording[],
-    readonly transcriptions?: string[],
+    readonly transcriptions?: URL[],
   )
   {}
 
   static parse(
     context: CheerioCrawlingContext,
     recordingsAndTranscriptions: Cheerio<AnyNode>,
-  ): RecordingsAndTranscriptions
+  ): RecordingsAndTranscriptions | undefined
   {
-    const data: Partial<Mutable<RecordingsAndTranscriptions>> = {};
+    const data: Flexible<RecordingsAndTranscriptions> = {};
     recordingsAndTranscriptions.children().each((_, childElement) =>
     {
       const child = context.$(childElement);
@@ -68,16 +67,16 @@ class RecordingsAndTranscriptions
       } else if (child.hasClass("phoneticTranscription"))
       {
         const url = child.children("a").children("img").attr("src");
-        if (typeof url !== "string")
-        {
-          throw new TypeError(
-            `RecordingsAndTranscriptions.parse(): url is not a string [${url}]`,
-          );
-        }
-        data.transcriptions = [...data.transcriptions ?? [], url];
+        data.transcriptions = [
+          ...data.transcriptions ?? [],
+          new URL(ensureNonNullable(url)),
+        ];
       }
     });
-    return new this(data.recordings, data.transcriptions);
+
+    if (Object.keys(data).length > 0)
+      return new this(data.recordings, data.transcriptions);
+    return undefined;
   }
 }
 
@@ -93,9 +92,9 @@ class AdditionalInformation
   static parse(
     context: CheerioCrawlingContext,
     additionalInformation: Cheerio<AnyNode>,
-  ): AdditionalInformation
+  ): AdditionalInformation | undefined
   {
-    const data: Mutable<Partial<AdditionalInformation>> = {};
+    const data: Flexible<AdditionalInformation> = {};
     additionalInformation.contents().each((_, childNode) =>
     {
       const child = context.$(childNode);
@@ -111,7 +110,7 @@ class AdditionalInformation
         ];
       } else if (childNode.nodeType === 3)
       {
-        const nodeText = removeBrackets(child.text().trim()) || undefined;
+        const nodeText = child.text().trim().slice(1, -1) || undefined;
         if (nodeText)
           data.other = [...data.other ?? [], nodeText];
       } else
@@ -121,12 +120,17 @@ class AdditionalInformation
         );
       }
     });
-    return new this(
-      data.languageRegister,
-      data.languageVariety,
-      data.other,
-      data.popularity,
-    );
+
+    if (Object.keys(data).length > 0)
+    {
+      return new this(
+        data.languageRegister,
+        data.languageVariety,
+        data.other,
+        data.popularity,
+      );
+    }
+    return undefined;
   }
 }
 
@@ -143,14 +147,14 @@ class ExampleSentence
     exampleSentence: Cheerio<AnyNode>,
   ): ExampleSentence
   {
-    const data: Partial<Mutable<ExampleSentence>> = {};
+    const data: Flexible<ExampleSentence> = {};
     exampleSentence.contents().each((_, childNode) =>
     {
       const child = context.$(childNode);
       if (childNode.nodeType === 3)
         data.sentence = (data.sentence ?? "").concat(child.text());
       else if (child.hasClass("exampleSentenceTranslation"))
-        data.translation = removeBrackets(child.text().trim());
+        data.translation = child.text().trim().slice(1, -1);
       else if (child.hasClass("recordingsAndTranscriptions"))
       {
         data.recordingsAndTranscriptions = RecordingsAndTranscriptions.parse(
@@ -159,22 +163,9 @@ class ExampleSentence
         );
       }
     });
-    if (typeof data.sentence !== "string")
-    {
-      throw new TypeError(
-        `ExampleSentence.parse(): data.sentence is not a string [${data.sentence}]`,
-      );
-    }
-    if (typeof data.translation !== "string")
-    {
-      throw new TypeError(
-        `ExampleSentence.parse(): data.translation is not a string [${data.translation}]`,
-      );
-    }
-    data.sentence = data.sentence.trim();
     return new this(
-      data.sentence,
-      data.translation,
+      ensureNonNullable(data.sentence).trim(),
+      ensureNonNullable(data.translation),
       data.recordingsAndTranscriptions,
     );
   }
@@ -192,7 +183,7 @@ class RefItem
     refItem: Cheerio<AnyNode>,
   ): RefItem
   {
-    const data: Partial<Mutable<RefItem>> = {};
+    const data: Flexible<RefItem> = {};
     refItem.children().each((_, childElement) =>
     {
       const child = context.$(childElement);
@@ -206,13 +197,10 @@ class RefItem
         );
       }
     });
-    if (typeof data.word !== "string")
-    {
-      throw new TypeError(
-        `RefItem.parse(): data.word is not a string [${data.word}]`,
-      );
-    }
-    return new this(data.word, data.recordingsAndTranscriptions);
+    return new this(
+      ensureNonNullable(data.word),
+      data.recordingsAndTranscriptions,
+    );
   }
 }
 
@@ -223,32 +211,26 @@ class Ref
 
   static parse(context: CheerioCrawlingContext, ref: Cheerio<AnyNode>): Ref
   {
-    const data: Partial<Mutable<Ref>> = {};
+    const data: Flexible<Ref> = {};
     ref.children().contents().each((_, childNode) =>
     {
       const child = context.$(childNode);
       if (childNode.nodeType === 3)
-        data.type = (data.type ?? "").concat(child.text());
+        data.type = data.type || child.text().trim().slice(0, -1);
       else if (child.prop("tagName") === "A")
       {
         const refItem = child
           .nextUntil("a")
           .addBack()
-          .wrapAll("<div></div>")
+          .wrapAll(emptyDiv)
           .parent();
         data.items = [...data.items ?? [], RefItem.parse(context, refItem)];
       }
     });
-    if (typeof data.type !== "string")
-    {
-      throw new TypeError(
-        `Ref.parse(): data.type is not a string [${data.type}]`,
-      );
-    }
-    if (data.items === undefined)
-      throw new TypeError(`Ref.parse(): data.items is undefined`);
-    data.type = data.type.trim().slice(0, -1);
-    return new this(data.type, data.items);
+    return new this(
+      ensureNonNullable(data.type),
+      ensureNonNullable(data.items),
+    );
   }
 }
 
@@ -270,7 +252,7 @@ class Meaning
     meaning: Cheerio<AnyNode>,
   ): Meaning
   {
-    const data: Partial<Mutable<Meaning>> = {};
+    const data: Flexible<Meaning> = {};
     meaning.children().each((_, childElement) =>
     {
       const child = context.$(childElement);
@@ -280,7 +262,7 @@ class Meaning
       {
         data.grammarTags = [
           ...data.grammarTags ?? [],
-          removeBrackets(child.text()),
+          child.text().slice(1, -1),
         ];
       } else if (child.hasClass("meaningAdditionalInformation"))
       {
@@ -301,10 +283,8 @@ class Meaning
       else if (child.hasClass("ref"))
         data.refs = [...data.refs ?? [], Ref.parse(context, child)];
     });
-    if (data.hws === undefined)
-      throw new TypeError(`Meaning.parse(): data.hws is undefined`);
     return new this(
-      data.hws,
+      ensureNonNullable(data.hws),
       data.additionalInformation,
       data.grammarTags,
       data.exampleSentences,
@@ -325,7 +305,7 @@ class MeaningGroup
     meaningGroup: Cheerio<AnyNode>,
   ): MeaningGroup
   {
-    const data: Partial<Mutable<MeaningGroup>> = {};
+    const data: Flexible<MeaningGroup> = {};
     meaningGroup.children().each((_, childElement) =>
     {
       const child = context.$(childElement);
@@ -341,16 +321,10 @@ class MeaningGroup
           .get();
       }
     });
-    if (typeof data.partOfSpeech !== "string")
-    {
-      throw new TypeError(
-        `MeaningGroup.parse(): data.partOfSpeech is not a string`,
-      );
-    }
-    if (data.meanings === undefined)
-      throw new TypeError(`MeaningGroup.parse(): data.meanings is undefined`);
-
-    return new this(data.partOfSpeech, data.meanings);
+    return new this(
+      ensureNonNullable(data.partOfSpeech),
+      ensureNonNullable(data.meanings),
+    );
   }
 }
 
@@ -358,9 +332,9 @@ class Header
 {
   constructor(
     readonly title: string,
-    readonly recordingsAndTranscriptions: RecordingsAndTranscriptions,
-    readonly additionalInformation: AdditionalInformation,
     readonly lessPopular: boolean,
+    readonly additionalInformation?: AdditionalInformation,
+    readonly recordingsAndTranscriptions?: RecordingsAndTranscriptions,
   )
   {}
 
@@ -369,7 +343,7 @@ class Header
     header: Cheerio<AnyNode>,
   ): Header
   {
-    const data: Partial<Mutable<Header>> = {};
+    const data: Flexible<Header> = {};
     header.children().each((_, childElement) =>
     {
       const child = context.$(childElement);
@@ -391,32 +365,12 @@ class Header
         );
       }
     });
-    if (typeof data.title !== "string")
-      throw new TypeError(`Header.parse(): data.title is not a string`);
-    if (data.recordingsAndTranscriptions === undefined)
-    {
-      throw new TypeError(
-        `MeaningGroup.parse(): data.recordingsAndTranscriptions is undefined`,
-      );
-    }
-    if (data.additionalInformation === undefined)
-    {
-      throw new TypeError(
-        `MeaningGroup.parse(): data.additionalInformation is undefined`,
-      );
-    }
-    if (typeof data.lessPopular !== "boolean")
-    {
-      throw new TypeError(
-        `MeaningGroup.parse(): data.lessPopular is not a boolean`,
-      );
-    }
 
     return new this(
-      data.title,
-      data.recordingsAndTranscriptions,
+      ensureNonNullable(data.title),
+      ensureNonNullable(data.lessPopular),
       data.additionalInformation,
-      data.lessPopular,
+      data.recordingsAndTranscriptions,
     );
   }
 }
@@ -435,7 +389,7 @@ class DictionaryEntity
     dictionaryEntity: Cheerio<AnyNode>,
   ): DictionaryEntity
   {
-    const data: Partial<Mutable<DictionaryEntity>> = {};
+    const data: Flexible<DictionaryEntity> = {};
     dictionaryEntity.children().each((_, childElement) =>
     {
       const child = context.$(childElement);
@@ -450,7 +404,7 @@ class DictionaryEntity
               .$(hwElement)
               .nextUntil(".hw")
               .addBack()
-              .wrapAll("<div></div>")
+              .wrapAll(emptyDiv)
               .parent();
             return Header.parse(context, header);
           })
@@ -465,26 +419,18 @@ class DictionaryEntity
               .$(partOfSpeechSectionHeaderElement)
               .nextUntil(".partOfSpeechSectionHeader")
               .addBack()
-              .wrapAll("<div></div>")
+              .wrapAll(emptyDiv)
               .parent();
             return MeaningGroup.parse(context, meaningGroup);
           })
           .get();
       }
     });
-    if (data.headers === undefined)
-    {
-      throw new TypeError(
-        "DictionaryEntity.parse(): data.headers is undefined",
-      );
-    }
-    if (data.meaningGroups === undefined)
-    {
-      throw new TypeError(
-        "DictionaryEntity.parse(): data.meaningGroups is undefined",
-      );
-    }
-    return new this(data.headers, data.meaningGroups, data.note);
+    return new this(
+      ensureNonNullable(data.headers),
+      ensureNonNullable(data.meaningGroups),
+      data.note,
+    );
   }
 }
 
