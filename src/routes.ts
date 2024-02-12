@@ -344,10 +344,10 @@ class MeaningGroup
             Meaning.parse(context, context.$(meaningElement))
           )
           .get();
-      } else
-      {
+      } else if (child.hasClass("additionalSentences"))
+        return;
+      else
         logUnknownItem(context, child, this.name);
-      }
     });
     return new this(
       ensureNonNullable(data.partOfSpeech),
