@@ -364,6 +364,7 @@ class Header
     readonly lessPopular: boolean,
     readonly additionalInformation?: AdditionalInformation,
     readonly recordingsAndTranscriptions?: RecordingsAndTranscriptions,
+    readonly partOfSpeech?: string,
   )
   {}
 
@@ -392,7 +393,9 @@ class Header
           context,
           child,
         );
-      } else if (child.hasClass("hwcomma") || child.prop("tagName") === "BR")
+      } else if (child.hasClass("headerPartOfSpeech"))
+        data.partOfSpeech = child.text();
+      else if (child.hasClass("hwcomma") || child.prop("tagName") === "BR")
         return;
       else
         logUnknownItem(context, child, this.name);
