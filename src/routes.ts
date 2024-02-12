@@ -319,10 +319,54 @@ class Meaning
   }
 }
 
+class Form
+{
+  static name = "Form";
+  constructor(
+    readonly term: string,
+    readonly form: string,
+    readonly recordingsAndTranscriptions?: RecordingsAndTranscriptions,
+  )
+  {}
+
+  static parse(context: CheerioCrawlingContext, form: Cheerio<AnyNode>): Form
+  {
+    const data: Flexible<Form> = {};
+    form.children().each((_, childElement) =>
+    {
+      const child = context.$(childElement);
+      if (child.hasClass("foreignTermText"))
+        data.term = child.text();
+      else if (child.hasClass("foreignTermHeader"))
+        data.form = child.text();
+      else if (child.hasClass("recordingsAndTranscriptions"))
+      {
+        data.recordingsAndTranscriptions = RecordingsAndTranscriptions.parse(
+          context,
+          child,
+        );
+      } else
+      {
+        logUnknownItem(context, child, this.name);
+      }
+    });
+
+    return new this(
+      ensureNonNullable(data.term),
+      ensureNonNullable(data.form),
+      data.recordingsAndTranscriptions,
+    );
+  }
+}
+
 class MeaningGroup
 {
   static name = "Meaning Group";
-  constructor(readonly partOfSpeech: string, readonly meanings: Meaning[])
+  constructor(
+    readonly partOfSpeech: string,
+    readonly meanings: Meaning[],
+    readonly irregularForms?: Form[],
+  )
   {}
 
   static parse(
@@ -344,6 +388,21 @@ class MeaningGroup
             Meaning.parse(context, context.$(meaningElement))
           )
           .get();
+      } else if (child.hasClass("vf"))
+      {
+        data.irregularForms = child
+          .children(".foreignTermText")
+          .map((_, foreignTermTextElement) =>
+          {
+            const form = context
+              .$(foreignTermTextElement)
+              .nextUntil(".foreignTermText")
+              .addBack()
+              .wrapAll(newDiv("form"))
+              .parent();
+            return Form.parse(context, form);
+          })
+          .get();
       } else if (child.hasClass("additionalSentences"))
         return;
       else
@@ -352,6 +411,7 @@ class MeaningGroup
     return new this(
       ensureNonNullable(data.partOfSpeech),
       ensureNonNullable(data.meanings),
+      data.irregularForms,
     );
   }
 }
