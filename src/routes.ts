@@ -397,9 +397,9 @@ class MeaningGroup
 {
   static name = "Meaning Group";
   constructor(
-    readonly partOfSpeech: string,
     readonly meanings: Meaning[],
     readonly irregularForms?: Form[],
+    readonly partOfSpeech?: string,
   )
   {}
 
@@ -443,9 +443,9 @@ class MeaningGroup
         logUnknownItem(context, child, this.name);
     });
     return new this(
-      ensureNonNullable(data.partOfSpeech),
       ensureNonNullable(data.meanings),
       data.irregularForms,
+      data.partOfSpeech,
     );
   }
 }
@@ -523,7 +523,10 @@ class DictionaryEntity
     dicrtionaryEntityChildren.each((i, childElement) =>
     {
       const child = context.$(childElement);
-      if (child.hasClass("partOfSpeechSectionHeader"))
+      if (
+        child.hasClass("partOfSpeechSectionHeader") ||
+        child.hasClass("foreignToNativeMeanings")
+      )
       {
         secondSectionStartIndex = i;
         return false;
@@ -565,12 +568,17 @@ class DictionaryEntity
     });
     data.meaningGroups = dicrtionaryEntityChildren
       .slice(secondSectionStartIndex)
-      .filter(".partOfSpeechSectionHeader")
-      .map((_, partOfSpeechSectionHeaderElement) =>
+      .filter(".foreignToNativeMeanings")
+      .map((_, foreignToNativeMeaningsElement) =>
       {
         const meaningGroup = context
-          .$(partOfSpeechSectionHeaderElement)
-          .nextUntil(".partOfSpeechSectionHeader")
+          .$(foreignToNativeMeaningsElement)
+          .prev(".partOfSpeechSectionHeader")
+          .addBack()
+          .nextUntil(
+            ".foreignToNativeMeanings",
+            ":not(.partOfSpeechSectionHeader)",
+          )
           .addBack()
           .wrapAll(newDiv("meaningGroup"))
           .parent();
