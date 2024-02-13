@@ -273,6 +273,7 @@ class Meaning
   static name = "Meaning";
   constructor(
     readonly terms: string,
+    readonly notForChildren: boolean,
     readonly additionalInformation?: AdditionalInformation,
     readonly grammarTags?: string[],
     readonly exampleSentences?: ExampleSentence[],
@@ -285,13 +286,21 @@ class Meaning
   static parse(
     context: CheerioCrawlingContext,
     meaning: Cheerio<AnyNode>,
+    isNotForChildren: boolean = false,
   ): Meaning
   {
     const data: Flexible<Meaning> = {};
+    let meaningNotForChildren: Cheerio<AnyNode> | undefined;
+    let foundNotForChildren = false;
     meaning.contents().each((_, childNode) =>
     {
       const child = context.$(childNode);
-      if (child.hasClass("hw") || childNode.nodeType === 3)
+      if (child.hasClass("hiddenNotForChildrenMeaning"))
+      {
+        foundNotForChildren = true;
+        meaningNotForChildren = child;
+        return false;
+      } else if (child.hasClass("hw") || childNode.nodeType === 3)
         data.terms = (data.terms ?? "").concat(child.text());
       else if (child.hasClass("grammarTag"))
       {
@@ -321,9 +330,19 @@ class Meaning
         return;
       else
         logUnknownItem(context, child, this.name);
+      return true;
     });
+    if (foundNotForChildren)
+    {
+      return this.parse(
+        context,
+        ensureNonNullable(meaningNotForChildren),
+        foundNotForChildren,
+      );
+    }
     return new this(
       ensureNonNullable(data.terms).trim(),
+      isNotForChildren,
       data.additionalInformation,
       data.grammarTags,
       data.exampleSentences,
