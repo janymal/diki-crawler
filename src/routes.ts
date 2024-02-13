@@ -244,10 +244,10 @@ class Ref
       {
         secondSectionStartIndex = i;
         return false;
-      } else
-      {
+      } else if (child.hasClass("refIcon"))
+        return;
+      else
         logUnknownItem(context, child, this.name);
-      }
       return true;
     });
     data.items = refContents
