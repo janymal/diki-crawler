@@ -272,6 +272,7 @@ class Meaning
 {
   static name = "Meaning";
   constructor(
+    readonly id: string,
     readonly terms: string,
     readonly notForChildren: boolean,
     readonly additionalInformation?: AdditionalInformation,
@@ -344,6 +345,7 @@ class Meaning
       );
     }
     return new this(
+      ensureNonNullable(meaning.attr("id")).trim().slice(7, -3),
       ensureNonNullable(data.terms).trim(),
       isNotForChildren,
       data.additionalInformation,
