@@ -519,8 +519,8 @@ class DictionaryEntity
   {
     const data: Flexible<DictionaryEntity> = {};
     let secondSectionStartIndex: number | undefined;
-    const dicrtionaryEntityChildren = dictionaryEntity.children();
-    dicrtionaryEntityChildren.each((i, childElement) =>
+    const dictionaryEntityChildren = dictionaryEntity.children();
+    dictionaryEntityChildren.each((i, childElement) =>
     {
       const child = context.$(childElement);
       if (
@@ -566,7 +566,7 @@ class DictionaryEntity
       }
       return true;
     });
-    data.meaningGroups = dicrtionaryEntityChildren
+    data.meaningGroups = dictionaryEntityChildren
       .slice(secondSectionStartIndex)
       .filter(".foreignToNativeMeanings")
       .map((_, foreignToNativeMeaningsElement) =>
