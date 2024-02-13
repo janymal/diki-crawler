@@ -191,7 +191,7 @@ class RefItem
 {
   static name = "Ref Item";
   constructor(
-    readonly word: string,
+    readonly term: string,
     readonly recordingsAndTranscriptions?: RecordingsAndTranscriptions,
   )
   {}
@@ -205,7 +205,7 @@ class RefItem
     {
       const child = context.$(childElement);
       if (child.prop("tagName") === "A")
-        data.word = child.text();
+        data.term = child.text();
       else if (child.hasClass("recordingsAndTranscriptions"))
       {
         data.recordingsAndTranscriptions = RecordingsAndTranscriptions.parse(
@@ -218,7 +218,7 @@ class RefItem
       }
     });
     return new this(
-      ensureNonNullable(data.word),
+      ensureNonNullable(data.term),
       data.recordingsAndTranscriptions,
     );
   }
@@ -272,7 +272,7 @@ class Meaning
 {
   static name = "Meaning";
   constructor(
-    readonly hws: string[],
+    readonly terms: string,
     readonly additionalInformation?: AdditionalInformation,
     readonly grammarTags?: string[],
     readonly exampleSentences?: ExampleSentence[],
@@ -288,11 +288,11 @@ class Meaning
   ): Meaning
   {
     const data: Flexible<Meaning> = {};
-    meaning.children().each((_, childElement) =>
+    meaning.contents().each((_, childNode) =>
     {
-      const child = context.$(childElement);
-      if (child.hasClass("hw"))
-        data.hws = [...data.hws ?? [], child.text()];
+      const child = context.$(childNode);
+      if (child.hasClass("hw") || childNode.nodeType === 3)
+        data.terms = (data.terms ?? "").concat(child.text());
       else if (child.hasClass("grammarTag"))
       {
         data.grammarTags = [
@@ -323,7 +323,7 @@ class Meaning
         logUnknownItem(context, child, this.name);
     });
     return new this(
-      ensureNonNullable(data.hws),
+      ensureNonNullable(data.terms).trim(),
       data.additionalInformation,
       data.grammarTags,
       data.exampleSentences,
