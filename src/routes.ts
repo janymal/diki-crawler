@@ -276,6 +276,7 @@ class Meaning
     readonly notForChildren: boolean,
     readonly additionalInformation?: AdditionalInformation,
     readonly grammarTags?: string[],
+    readonly mf?: string, // TODO: figure out what actually that is
     readonly exampleSentences?: ExampleSentence[],
     readonly thematicDictionary?: string,
     readonly note?: string,
@@ -322,10 +323,12 @@ class Meaning
         ];
       } else if (child.hasClass("cat"))
         data.thematicDictionary = child.text().trim();
-      else if (child.hasClass("nt"))
-        data.note = child.text().trim();
       else if (child.hasClass("ref"))
         data.refs = [...data.refs ?? [], Ref.parse(context, child)];
+      else if (child.hasClass("nt"))
+        data.note = child.text().trim();
+      else if (child.hasClass("mf"))
+        data.mf = child.text().trim();
       else if (child.hasClass("repetitionAddOrRemoveIconAnchor"))
         return;
       else
@@ -345,6 +348,7 @@ class Meaning
       isNotForChildren,
       data.additionalInformation,
       data.grammarTags,
+      data.mf,
       data.exampleSentences,
       data.thematicDictionary,
       data.note,
