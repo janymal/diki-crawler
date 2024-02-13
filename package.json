@@ -4,6 +4,7 @@
   "type": "module",
   "description": "A diki.pl scraper.",
   "dependencies": {
+    "cheerio": "^1.0.0-rc",
     "crawlee": "^3.0.0"
   },
   "devDependencies": {
