@@ -232,24 +232,39 @@ class Ref
 
   static parse(context: CheerioCrawlingContext, ref: Cheerio<AnyNode>): Ref
   {
-    ref.children().children("a").nextUntil("a").addBack().wrapAll(
-      newDiv("refItem"),
-    );
     const data: Flexible<Ref> = {};
-    ref.children().contents().each((_, childNode) =>
+    let secondSectionStartIndex: number | undefined;
+    const refContents = ref.children().contents();
+    refContents.each((i, childNode) =>
     {
       const child = context.$(childNode);
       if (childNode.nodeType === 3)
         data.type = data.type || child.text().trim().slice(0, -1);
-      else if (child.hasClass("refItem"))
-        data.items = [...data.items ?? [], RefItem.parse(context, child)];
-      else
+      else if (child.prop("tagName") === "A")
+      {
+        secondSectionStartIndex = i;
+        return false;
+      } else
+      {
         logUnknownItem(context, child, this.name);
+      }
+      return true;
     });
-    return new this(
-      ensureNonNullable(data.type),
-      ensureNonNullable(data.items),
-    );
+    data.items = refContents
+      .slice(secondSectionStartIndex)
+      .filter("a")
+      .map((_, aElement) =>
+      {
+        const refItem = context
+          .$(aElement)
+          .nextUntil("a")
+          .addBack()
+          .wrapAll(newDiv("refItem"))
+          .parent();
+        return RefItem.parse(context, refItem);
+      })
+      .get();
+    return new this(ensureNonNullable(data.type), data.items);
   }
 }
 
@@ -484,20 +499,16 @@ class DictionaryEntity
   ): DictionaryEntity
   {
     const data: Flexible<DictionaryEntity> = {};
-    dictionaryEntity.children(".partOfSpeechSectionHeader").each(
-      (_, partOfSpeechSectionHeaderElement) =>
-      {
-        context
-          .$(partOfSpeechSectionHeaderElement)
-          .nextUntil(".partOfSpeechSectionHeader")
-          .addBack()
-          .wrapAll(newDiv("meaningGroup"));
-      },
-    );
-    dictionaryEntity.children().each((_, childElement) =>
+    let secondSectionStartIndex: number | undefined;
+    const dicrtionaryEntityChildren = dictionaryEntity.children();
+    dicrtionaryEntityChildren.each((i, childElement) =>
     {
       const child = context.$(childElement);
-      if (child.hasClass("hws"))
+      if (child.hasClass("partOfSpeechSectionHeader"))
+      {
+        secondSectionStartIndex = i;
+        return false;
+      } else if (child.hasClass("hws"))
       {
         data.headers = child
           .children("h1")
@@ -514,12 +525,6 @@ class DictionaryEntity
           })
           .get();
         data.note = child.children(".nt").text() || undefined;
-      } else if (child.hasClass("meaningGroup"))
-      {
-        data.meaningGroups = [
-          ...data.meaningGroups ?? [],
-          MeaningGroup.parse(context, child),
-        ];
       } else if (child.hasClass("dictpict"))
       {
         data.pictures = [
@@ -537,10 +542,25 @@ class DictionaryEntity
       {
         logUnknownItem(context, child, this.name);
       }
+      return true;
     });
+    data.meaningGroups = dicrtionaryEntityChildren
+      .slice(secondSectionStartIndex)
+      .filter(".partOfSpeechSectionHeader")
+      .map((_, partOfSpeechSectionHeaderElement) =>
+      {
+        const meaningGroup = context
+          .$(partOfSpeechSectionHeaderElement)
+          .nextUntil(".partOfSpeechSectionHeader")
+          .addBack()
+          .wrapAll(newDiv("meaningGroup"))
+          .parent();
+        return MeaningGroup.parse(context, meaningGroup);
+      })
+      .get();
     return new this(
       ensureNonNullable(data.headers),
-      ensureNonNullable(data.meaningGroups),
+      data.meaningGroups,
       data.note,
       data.pictures,
     );
