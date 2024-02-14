@@ -15,12 +15,12 @@ function ensureNonNullable<T>(target: T): NonNullable<T>
   return target as NonNullable<T>;
 }
 
-function getIfNotOverwriting<T>(target: T, source: T): T
+function getIfNotOverwriting<T>(target: T, source: T, name: string): T
 {
   if (target === undefined || target === null)
     return source;
   else
-    throw new Error(`overwriting the target`);
+    throw new Error(`overwriting the field: ${name}`);
 }
 
 const newDiv = (className: string) => `<div class="${className}"></div>`;
@@ -51,6 +51,7 @@ class Recording
     data.lang = getIfNotOverwriting(
       data.lang,
       recording.attr("class")?.split(" ")[0],
+      "lang",
     );
     data.url = getIfNotOverwriting(
       data.url,
@@ -62,6 +63,7 @@ class Recording
         ),
         context.request.url,
       ),
+      "url",
     );
     return new this(ensureNonNullable(data.url), ensureNonNullable(data.lang));
   }
@@ -131,12 +133,14 @@ class AdditionalInformation
         data.popularity = getIfNotOverwriting(
           data.popularity,
           child.text().length,
+          "popularity",
         );
       } else if (child.hasClass("languageVariety"))
       {
         data.languageVariety = getIfNotOverwriting(
           data.languageVariety,
           child.text(),
+          "languageVariety",
         );
       } else if (child.hasClass("languageRegister"))
       {
@@ -196,6 +200,7 @@ class ExampleSentence
             .text()
             .trim()
             .slice(1, -1),
+          "translation",
         );
       } else if (child.hasClass("recordingsAndTranscriptions"))
       {
@@ -205,6 +210,7 @@ class ExampleSentence
             context,
             exampleSentence.children(".recordingsAndTranscriptions"),
           ),
+          "recordingsAndTranscriptions",
         );
       } else if (child.hasClass("repetitionAddOrRemoveIconAnchor"))
         return;
@@ -237,12 +243,13 @@ class RefItem
     {
       const child = context.$(childElement);
       if (child.prop("tagName") === "A")
-        data.term = getIfNotOverwriting(data.term, child.text());
+        data.term = getIfNotOverwriting(data.term, child.text(), "term");
       else if (child.hasClass("recordingsAndTranscriptions"))
       {
         data.recordingsAndTranscriptions = getIfNotOverwriting(
           data.recordingsAndTranscriptions,
           RecordingsAndTranscriptions.parse(context, child),
+          "recordingsAndTranscriptions",
         );
       } else
       {
@@ -354,6 +361,7 @@ class Meaning
             context,
             meaning.children(".meaningAdditionalInformation"),
           ),
+          "additionalInformation",
         );
       } else if (child.hasClass("exampleSentence"))
       {
@@ -366,13 +374,14 @@ class Meaning
         data.thematicDictionary = getIfNotOverwriting(
           data.thematicDictionary,
           child.text().trim(),
+          "thematicDictionary",
         );
       } else if (child.hasClass("ref"))
         data.refs = [...data.refs ?? [], Ref.parse(context, child)];
       else if (child.hasClass("nt"))
-        data.note = getIfNotOverwriting(data.note, child.text().trim());
+        data.note = getIfNotOverwriting(data.note, child.text().trim(), "note");
       else if (child.hasClass("mf"))
-        data.mf = getIfNotOverwriting(data.mf, child.text().trim());
+        data.mf = getIfNotOverwriting(data.mf, child.text().trim(), "mf");
       else if (child.hasClass("repetitionAddOrRemoveIconAnchor"))
         return;
       else
@@ -421,14 +430,15 @@ class Form
     {
       const child = context.$(childElement);
       if (child.hasClass("foreignTermText"))
-        data.term = getIfNotOverwriting(data.term, child.text());
+        data.term = getIfNotOverwriting(data.term, child.text(), "term");
       else if (child.hasClass("foreignTermHeader"))
-        data.form = getIfNotOverwriting(data.form, child.text());
+        data.form = getIfNotOverwriting(data.form, child.text(), "form");
       else if (child.hasClass("recordingsAndTranscriptions"))
       {
         data.recordingsAndTranscriptions = getIfNotOverwriting(
           data.recordingsAndTranscriptions,
           RecordingsAndTranscriptions.parse(context, child),
+          "recordingsAndTranscriptions",
         );
       } else
       {
@@ -468,6 +478,7 @@ class MeaningGroup
         data.partOfSpeech = getIfNotOverwriting(
           data.partOfSpeech,
           child.children(".partOfSpeech").text(),
+          "partOfSpeech",
         );
       } else if (child.hasClass("foreignToNativeMeanings"))
       {
@@ -527,19 +538,25 @@ class Header
       const child = context.$(childElement);
       if (child.hasClass("hw"))
       {
-        data.title = getIfNotOverwriting(data.title, child.text().trim());
+        data.title = getIfNotOverwriting(
+          data.title,
+          child.text().trim(),
+          "title",
+        );
         data.lessPopular = child.hasClass("hwLessPopularAlternative");
       } else if (child.hasClass("recordingsAndTranscriptions"))
       {
         data.recordingsAndTranscriptions = getIfNotOverwriting(
           data.recordingsAndTranscriptions,
           RecordingsAndTranscriptions.parse(context, child),
+          "recordingsAndTranscriptions",
         );
       } else if (child.hasClass("dictionaryEntryHeaderAdditionalInformation"))
       {
         data.additionalInformation = getIfNotOverwriting(
           data.additionalInformation,
           AdditionalInformation.parse(context, child),
+          "additionalInformation",
         );
       } else if (child.hasClass("hwcomma") || child.prop("tagName") === "BR")
         return;
@@ -604,6 +621,7 @@ class DictionaryEntity
         data.note = getIfNotOverwriting(
           data.note,
           child.children(".nt").text() || undefined,
+          "note",
         );
       } else if (child.hasClass("dictpict"))
       {
