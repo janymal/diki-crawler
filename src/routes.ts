@@ -558,7 +558,7 @@ class Header
           AdditionalInformation.parse(context, child),
           "additionalInformation",
         );
-      } else if (child.hasClass("hwcomma") || child.prop("tagName") === "BR")
+      } else if (child.prop("tagName") === "BR")
         return;
       else
         logUnknownItem(context, child, this.name);
@@ -611,7 +611,7 @@ class DictionaryEntity
           {
             const header = context
               .$(hwElement)
-              .nextUntil(".hw")
+              .nextUntil(".hw, .hwcomma")
               .addBack()
               .wrapAll(newDiv("header"))
               .parent();
