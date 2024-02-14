@@ -324,6 +324,7 @@ class Meaning
     context: CheerioCrawlingContext,
     meaning: Cheerio<AnyNode>,
     isNotForChildren: boolean = false,
+    id?: string,
   ): Meaning
   {
     const data: Flexible<Meaning> = {};
@@ -378,16 +379,18 @@ class Meaning
         logUnknownItem(context, child, this.name);
       return true;
     });
+    let idFromAttr = meaning.attr("id")?.trim().slice(7, -3);
     if (foundNotForChildren)
     {
       return this.parse(
         context,
         ensureNonNullable(meaningNotForChildren),
         foundNotForChildren,
+        idFromAttr,
       );
     }
     return new this(
-      ensureNonNullable(meaning.attr("id")).trim().slice(7, -3),
+      ensureNonNullable(id ?? idFromAttr),
       ensureNonNullable(data.terms).trim(),
       isNotForChildren,
       data.additionalInformation,
