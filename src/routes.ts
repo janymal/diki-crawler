@@ -666,4 +666,8 @@ router.addHandler("detail", async (context) =>
       const dictionaryEntity = context.$(dictionaryEntityElement);
       context.pushData(DictionaryEntity.parse(context, dictionaryEntity));
     });
+  await context.enqueueLinks({
+    globs: ["http?(s)://www.diki.pl/slownik-angielskiego?q=*"],
+    label: "detail"
+  });
 });
