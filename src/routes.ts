@@ -651,10 +651,7 @@ class DictionaryEntity
           .$(foreignToNativeMeaningsElement)
           .prev(".partOfSpeechSectionHeader")
           .addBack()
-          .nextUntil(
-            ".foreignToNativeMeanings",
-            ":not(.partOfSpeechSectionHeader)",
-          )
+          .nextUntil(".foreignToNativeMeanings, .partOfSpeechSectionHeader")
           .addBack()
           .wrapAll(newDiv("meaningGroup"))
           .parent();
