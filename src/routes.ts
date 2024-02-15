@@ -323,7 +323,7 @@ class Meaning
     readonly grammarTags?: string[],
     readonly mf?: string, // TODO: figure out what actually that is
     readonly exampleSentences?: ExampleSentence[],
-    readonly thematicDictionary?: string,
+    readonly thematicDictionaries?: string[],
     readonly note?: string,
     readonly refs?: Ref[],
   )
@@ -373,11 +373,10 @@ class Meaning
         ];
       } else if (child.hasClass("cat"))
       {
-        data.thematicDictionary = getIfNotOverwriting(
-          data.thematicDictionary,
+        data.thematicDictionaries = [
+          ...data.thematicDictionaries ?? [],
           child.text().trim(),
-          "thematicDictionary",
-        );
+        ];
       } else if (child.hasClass("ref"))
         data.refs = [...data.refs ?? [], Ref.parse(context, child)];
       else if (child.hasClass("nt"))
@@ -408,7 +407,7 @@ class Meaning
       data.grammarTags,
       data.mf,
       data.exampleSentences,
-      data.thematicDictionary,
+      data.thematicDictionaries,
       data.note,
       data.refs,
     );
