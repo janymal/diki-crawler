@@ -685,6 +685,6 @@ router.addHandler("detail", async (context) =>
     });
   await context.enqueueLinks({
     globs: ["http?(s)://www.diki.pl/slownik-angielskiego?q=*"],
-    label: "detail"
+    label: "detail",
   });
 });
