@@ -26,13 +26,15 @@ function getIfNotOverwriting<T>(target: T, source: T, name: string): T
 const newDiv = (className: string) => `<div class="${className}"></div>`;
 
 function logUnknownItem(
-  context: CheerioCrawlingContext,
+  { log, request }: CheerioCrawlingContext,
   item: Cheerio<AnyNode>,
   sectionName: string,
 )
 {
-  context.log.warning(
+  const { id, url, retryCount } = request;
+  log.warning(
     `Unknown item in the ${sectionName} section: ${item.prop("outerHTML")}`,
+    { id, url, retryCount },
   );
 }
 
