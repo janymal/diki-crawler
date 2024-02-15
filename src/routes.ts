@@ -326,6 +326,7 @@ class Meaning
     readonly thematicDictionaries?: string[],
     readonly note?: string,
     readonly refs?: Ref[],
+    readonly copyright?: string,
   )
   {}
 
@@ -383,7 +384,14 @@ class Meaning
         data.note = getIfNotOverwriting(data.note, child.text().trim(), "note");
       else if (child.hasClass("mf"))
         data.mf = getIfNotOverwriting(data.mf, child.text().trim(), "mf");
-      else if (child.hasClass("repetitionAddOrRemoveIconAnchor"))
+      else if (child.hasClass("meaning_copyright"))
+      {
+        data.copyright = getIfNotOverwriting(
+          data.copyright,
+          child.text().trim(),
+          "copyright",
+        );
+      } else if (child.hasClass("repetitionAddOrRemoveIconAnchor"))
         return;
       else
         logUnknownItem(context, child, this.name);
@@ -410,6 +418,7 @@ class Meaning
       data.thematicDictionaries,
       data.note,
       data.refs,
+      data.copyright,
     );
   }
 }
