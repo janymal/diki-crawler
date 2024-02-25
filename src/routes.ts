@@ -1,10 +1,8 @@
-import type { AnyNode, Cheerio } from "cheerio" with {
-  "resolution-mode": "require",
-};
-import { type CheerioCrawlingContext, createCheerioRouter } from "crawlee";
+import type { AnyNode, Cheerio, CheerioAPI } from "cheerio";
+import { load as parseHTML } from "cheerio";
+import console from "node:console";
 import { URL } from "node:url";
-
-export const router = createCheerioRouter();
+import type { Context } from "./context.js";
 
 type Flexible<T> = { -readonly [key in keyof T]?: T[key] };
 
@@ -26,15 +24,14 @@ function getIfNotOverwriting<T>(target: T, source: T, name: string): T
 const newDiv = (className: string) => `<div class="${className}"></div>`;
 
 function logUnknownItem(
-  { log, request }: CheerioCrawlingContext,
+  context: Context,
   item: Cheerio<AnyNode>,
   sectionName: string,
 )
 {
-  const { id, url, retryCount } = request;
-  log.warning(
+  console.warn(
     `Unknown item in the ${sectionName} section: ${item.prop("outerHTML")}`,
-    { id, url, retryCount },
+    context.request.url,
   );
 }
 
@@ -45,7 +42,8 @@ class Recording
   {}
 
   static parse(
-    context: CheerioCrawlingContext,
+    _: CheerioAPI,
+    context: Context,
     recording: Cheerio<AnyNode>,
   ): Recording
   {
@@ -81,19 +79,20 @@ class RecordingsAndTranscriptions
   {}
 
   static parse(
-    context: CheerioCrawlingContext,
+    $: CheerioAPI,
+    context: Context,
     recordingsAndTranscriptions: Cheerio<AnyNode>,
   ): RecordingsAndTranscriptions | undefined
   {
     const data: Flexible<RecordingsAndTranscriptions> = {};
     recordingsAndTranscriptions.children().each((_, childElement) =>
     {
-      const child = context.$(childElement);
+      const child = $(childElement);
       if (child.hasClass("hasRecording"))
       {
         data.recordings = [
           ...data.recordings ?? [],
-          Recording.parse(context, child),
+          Recording.parse($, context, child),
         ];
       } else if (child.hasClass("phoneticTranscription"))
       {
@@ -122,14 +121,15 @@ class AdditionalInformation
   )
   {}
   static parse(
-    context: CheerioCrawlingContext,
+    $: CheerioAPI,
+    context: Context,
     additionalInformation: Cheerio<AnyNode>,
   ): AdditionalInformation | undefined
   {
     const data: Flexible<AdditionalInformation> = {};
     additionalInformation.contents().each((_, childNode) =>
     {
-      const child = context.$(childNode);
+      const child = $(childNode);
       if (child.hasClass("starsForNumOccurrences"))
       {
         data.popularity = getIfNotOverwriting(
@@ -184,14 +184,15 @@ class ExampleSentence
   )
   {}
   static parse(
-    context: CheerioCrawlingContext,
+    $: CheerioAPI,
+    context: Context,
     exampleSentence: Cheerio<AnyNode>,
   ): ExampleSentence
   {
     const data: Flexible<ExampleSentence> = {};
     exampleSentence.contents().each((_, childNode) =>
     {
-      const child = context.$(childNode);
+      const child = $(childNode);
       if (childNode.nodeType === 3)
         data.sentence = (data.sentence ?? "").concat(child.text());
       else if (child.hasClass("exampleSentenceTranslation"))
@@ -209,6 +210,7 @@ class ExampleSentence
         data.recordingsAndTranscriptions = getIfNotOverwriting(
           data.recordingsAndTranscriptions,
           RecordingsAndTranscriptions.parse(
+            $,
             context,
             exampleSentence.children(".recordingsAndTranscriptions"),
           ),
@@ -236,21 +238,22 @@ class RefItem
   )
   {}
   static parse(
-    context: CheerioCrawlingContext,
+    $: CheerioAPI,
+    context: Context,
     refItem: Cheerio<AnyNode>,
   ): RefItem
   {
     const data: Flexible<RefItem> = {};
     refItem.children().each((_, childElement) =>
     {
-      const child = context.$(childElement);
+      const child = $(childElement);
       if (child.prop("tagName") === "A")
         data.term = getIfNotOverwriting(data.term, child.text(), "term");
       else if (child.hasClass("recordingsAndTranscriptions"))
       {
         data.recordingsAndTranscriptions = getIfNotOverwriting(
           data.recordingsAndTranscriptions,
-          RecordingsAndTranscriptions.parse(context, child),
+          RecordingsAndTranscriptions.parse($, context, child),
           "recordingsAndTranscriptions",
         );
       } else
@@ -271,14 +274,14 @@ class Ref
   constructor(readonly type: string, readonly items: RefItem[])
   {}
 
-  static parse(context: CheerioCrawlingContext, ref: Cheerio<AnyNode>): Ref
+  static parse($: CheerioAPI, context: Context, ref: Cheerio<AnyNode>): Ref
   {
     const data: Flexible<Ref> = {};
     let secondSectionStartIndex: number | undefined;
     const refContents = ref.children().contents();
     refContents.each((i, childNode) =>
     {
-      const child = context.$(childNode);
+      const child = $(childNode);
       if (childNode.nodeType === 3)
         data.type = (data.type ?? "").concat(child.text());
       else if (child.prop("tagName") === "A")
@@ -296,13 +299,12 @@ class Ref
       .filter("a")
       .map((_, aElement) =>
       {
-        const refItem = context
-          .$(aElement)
+        const refItem = $(aElement)
           .nextUntil("a")
           .addBack()
           .wrapAll(newDiv("refItem"))
           .parent();
-        return RefItem.parse(context, refItem);
+        return RefItem.parse($, context, refItem);
       })
       .get();
     return new this(
@@ -331,7 +333,8 @@ class Meaning
   {}
 
   static parse(
-    context: CheerioCrawlingContext,
+    $: CheerioAPI,
+    context: Context,
     meaning: Cheerio<AnyNode>,
     isNotForChildren: boolean = false,
     id?: string,
@@ -342,7 +345,7 @@ class Meaning
     let foundNotForChildren = false;
     meaning.contents().each((_, childNode) =>
     {
-      const child = context.$(childNode);
+      const child = $(childNode);
       if (child.hasClass("hiddenNotForChildrenMeaning"))
       {
         foundNotForChildren = true;
@@ -361,6 +364,7 @@ class Meaning
         data.additionalInformation = getIfNotOverwriting(
           data.additionalInformation,
           AdditionalInformation.parse(
+            $,
             context,
             meaning.children(".meaningAdditionalInformation"),
           ),
@@ -370,7 +374,7 @@ class Meaning
       {
         data.exampleSentences = [
           ...data.exampleSentences ?? [],
-          ExampleSentence.parse(context, child),
+          ExampleSentence.parse($, context, child),
         ];
       } else if (child.hasClass("cat"))
       {
@@ -379,7 +383,7 @@ class Meaning
           child.text().trim(),
         ];
       } else if (child.hasClass("ref"))
-        data.refs = [...data.refs ?? [], Ref.parse(context, child)];
+        data.refs = [...data.refs ?? [], Ref.parse($, context, child)];
       else if (child.hasClass("nt"))
         data.note = getIfNotOverwriting(data.note, child.text().trim(), "note");
       else if (child.hasClass("mf"))
@@ -401,6 +405,7 @@ class Meaning
     if (foundNotForChildren)
     {
       return this.parse(
+        $,
         context,
         ensureNonNullable(meaningNotForChildren),
         foundNotForChildren,
@@ -433,12 +438,12 @@ class Form
   )
   {}
 
-  static parse(context: CheerioCrawlingContext, form: Cheerio<AnyNode>): Form
+  static parse($: CheerioAPI, context: Context, form: Cheerio<AnyNode>): Form
   {
     const data: Flexible<Form> = {};
     form.children().each((_, childElement) =>
     {
-      const child = context.$(childElement);
+      const child = $(childElement);
       if (child.hasClass("foreignTermText"))
         data.term = getIfNotOverwriting(data.term, child.text(), "term");
       else if (child.hasClass("foreignTermHeader"))
@@ -447,7 +452,7 @@ class Form
       {
         data.recordingsAndTranscriptions = getIfNotOverwriting(
           data.recordingsAndTranscriptions,
-          RecordingsAndTranscriptions.parse(context, child),
+          RecordingsAndTranscriptions.parse($, context, child),
           "recordingsAndTranscriptions",
         );
       } else
@@ -475,14 +480,15 @@ class MeaningGroup
   {}
 
   static parse(
-    context: CheerioCrawlingContext,
+    $: CheerioAPI,
+    context: Context,
     meaningGroup: Cheerio<AnyNode>,
   ): MeaningGroup
   {
     const data: Flexible<MeaningGroup> = {};
     meaningGroup.children().each((_, childElement) =>
     {
-      const child = context.$(childElement);
+      const child = $(childElement);
       if (child.hasClass("partOfSpeechSectionHeader"))
       {
         data.partOfSpeech = getIfNotOverwriting(
@@ -495,7 +501,7 @@ class MeaningGroup
         data.meanings = child
           .children("li")
           .map((_, meaningElement) =>
-            Meaning.parse(context, context.$(meaningElement))
+            Meaning.parse($, context, $(meaningElement))
           )
           .get();
       } else if (child.hasClass("vf"))
@@ -504,13 +510,12 @@ class MeaningGroup
           .children(".foreignTermText")
           .map((_, foreignTermTextElement) =>
           {
-            const form = context
-              .$(foreignTermTextElement)
+            const form = $(foreignTermTextElement)
               .nextUntil(".foreignTermText")
               .addBack()
               .wrapAll(newDiv("form"))
               .parent();
-            return Form.parse(context, form);
+            return Form.parse($, context, form);
           })
           .get();
       } else if (child.hasClass("additionalSentences"))
@@ -538,14 +543,15 @@ class Header
   {}
 
   static parse(
-    context: CheerioCrawlingContext,
+    $: CheerioAPI,
+    context: Context,
     header: Cheerio<AnyNode>,
   ): Header
   {
     const data: Flexible<Header> = {};
     header.children().each((_, childElement) =>
     {
-      const child = context.$(childElement);
+      const child = $(childElement);
       if (child.hasClass("hw"))
       {
         data.title = getIfNotOverwriting(
@@ -558,14 +564,14 @@ class Header
       {
         data.recordingsAndTranscriptions = getIfNotOverwriting(
           data.recordingsAndTranscriptions,
-          RecordingsAndTranscriptions.parse(context, child),
+          RecordingsAndTranscriptions.parse($, context, child),
           "recordingsAndTranscriptions",
         );
       } else if (child.hasClass("dictionaryEntryHeaderAdditionalInformation"))
       {
         data.additionalInformation = getIfNotOverwriting(
           data.additionalInformation,
-          AdditionalInformation.parse(context, child),
+          AdditionalInformation.parse($, context, child),
           "additionalInformation",
         );
       } else if (child.prop("tagName") === "BR")
@@ -595,7 +601,8 @@ class DictionaryEntity
   {}
 
   static parse(
-    context: CheerioCrawlingContext,
+    $: CheerioAPI,
+    context: Context,
     dictionaryEntity: Cheerio<AnyNode>,
   ): DictionaryEntity
   {
@@ -604,7 +611,7 @@ class DictionaryEntity
     const dictionaryEntityChildren = dictionaryEntity.children();
     dictionaryEntityChildren.each((i, childElement) =>
     {
-      const child = context.$(childElement);
+      const child = $(childElement);
       if (
         child.hasClass("partOfSpeechSectionHeader") ||
         child.hasClass("foreignToNativeMeanings")
@@ -619,13 +626,12 @@ class DictionaryEntity
           .children(".hw")
           .map((_, hwElement) =>
           {
-            const header = context
-              .$(hwElement)
+            const header = $(hwElement)
               .nextUntil(".hw, .hwcomma")
               .addBack()
               .wrapAll(newDiv("header"))
               .parent();
-            return Header.parse(context, header);
+            return Header.parse($, context, header);
           })
           .get();
         data.note = getIfNotOverwriting(
@@ -657,15 +663,14 @@ class DictionaryEntity
       .filter(".foreignToNativeMeanings")
       .map((_, foreignToNativeMeaningsElement) =>
       {
-        const meaningGroup = context
-          .$(foreignToNativeMeaningsElement)
+        const meaningGroup = $(foreignToNativeMeaningsElement)
           .prev(".partOfSpeechSectionHeader")
           .addBack()
           .nextUntil(".foreignToNativeMeanings, .partOfSpeechSectionHeader")
           .addBack()
           .wrapAll(newDiv("meaningGroup"))
           .parent();
-        return MeaningGroup.parse(context, meaningGroup);
+        return MeaningGroup.parse($, context, meaningGroup);
       })
       .get();
     return new this(
@@ -677,22 +682,19 @@ class DictionaryEntity
   }
 }
 
-router.addHandler("detail", async (context) =>
+export function* DikiItem(page: string, context: Context)
 {
-  context
-    .$("#en-pl")
+  const $ = parseHTML(page);
+  const dictionaryEntities = $("#en-pl")
     .parent()
     .next(".diki-results-container")
     .children(".diki-results-left-column")
     .children()
-    .children(".dictionaryEntity")
-    .each((_, dictionaryEntityElement) =>
-    {
-      const dictionaryEntity = context.$(dictionaryEntityElement);
-      context.pushData(DictionaryEntity.parse(context, dictionaryEntity));
-    });
-  await context.enqueueLinks({
-    globs: ["http?(s)://www.diki.pl/slownik-angielskiego?q=*"],
-    label: "detail",
-  });
-});
+    .children(".dictionaryEntity");
+  for (const dictionaryEntity of dictionaryEntities)
+    yield DictionaryEntity.parse($, context, $(dictionaryEntity));
+  // await context.enqueueLinks({
+  //   globs: ["http?(s)://www.diki.pl/slownik-angielskiego?q=*"],
+  //   label: "detail",
+  // });
+}
