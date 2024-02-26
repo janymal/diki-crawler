@@ -13,7 +13,7 @@
     "useBraces": "preferNone",
   },
   "includes": [
-    "src/**.ts"
+    "src/**/*.ts"
   ],
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.89.0.wasm"

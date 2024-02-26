@@ -8,19 +8,12 @@ export default [
   typescriptPlugin.configs["eslint-recommended"].overrides[0],
   unicorn.configs["flat/recommended"],
   {
-    languageOptions: {
-      parser: typescriptParser,
-    },
-    plugins: {
-      "@typescript-eslint": typescriptPlugin,
-    },
+    languageOptions: { parser: typescriptParser },
+    plugins: { "@typescript-eslint": typescriptPlugin },
     rules: typescriptPlugin.configs.strict.rules,
   },
   {
-    files: ["src/**.ts"],
-    rules: {
-      "unicorn/prevent-abbreviations": 0,
-      "eqeqeq": 2,
-    },
+    files: ["src/**/*.ts"],
+    rules: { "unicorn/prevent-abbreviations": 0, eqeqeq: 2 },
   },
 ];
