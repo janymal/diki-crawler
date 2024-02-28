@@ -1,6 +1,7 @@
 import type { AnyNode, Cheerio, CheerioAPI } from "cheerio";
 import type { Context } from "../shared-types.js";
-import { logUnknownItem, newDiv, PropertiesValidator } from "./utils.js";
+import { PropertiesValidator } from "../validator.js";
+import { logUnknownItem, newDiv } from "./utils.js";
 
 import type { DictionaryEntity } from "./dictionary-entity.js";
 import { RefItem } from "./ref-item.js";

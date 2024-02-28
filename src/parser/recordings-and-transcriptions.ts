@@ -1,9 +1,9 @@
 import type { AnyNode, Cheerio, CheerioAPI } from "cheerio";
 import { URL } from "node:url";
 import type { Context } from "../shared-types.js";
+import { PropertiesValidator } from "../validator.js";
 import type { DictionaryEntity } from "./dictionary-entity.js";
 import { Recording } from "./recording.js";
-import { PropertiesValidator } from "./utils.js";
 
 export class RecordingsAndTranscriptions
 {

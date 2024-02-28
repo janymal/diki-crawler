@@ -1,9 +1,10 @@
 import type { AnyNode, Cheerio, CheerioAPI } from "cheerio";
 import { URL } from "node:url";
 import type { Context } from "../shared-types.js";
+import { PropertiesValidator } from "../validator.js";
 import { Header } from "./header.js";
 import { MeaningGroup } from "./meaning-group.js";
-import { logUnknownItem, newDiv, PropertiesValidator } from "./utils.js";
+import { logUnknownItem, newDiv } from "./utils.js";
 
 export class DictionaryEntity
 {

@@ -1,11 +1,12 @@
 import type { AnyNode, Cheerio, CheerioAPI } from "cheerio";
 import type { Context } from "../shared-types.js";
+import { PropertiesValidator } from "../validator.js";
 import { AdditionalInformation } from "./additional-information.js";
 import type { DictionaryEntity } from "./dictionary-entity.js";
 import {
   RecordingsAndTranscriptions,
 } from "./recordings-and-transcriptions.js";
-import { logUnknownItem, PropertiesValidator } from "./utils.js";
+import { logUnknownItem } from "./utils.js";
 
 export class Header
 {
