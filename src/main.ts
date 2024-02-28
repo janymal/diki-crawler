@@ -1,15 +1,9 @@
-import { CheerioCrawler, purgeDefaultStorages } from "crawlee";
-import { router } from "./routes.js";
+import { Crawler } from "./crawler.js";
+import { DikiItem } from "./parser/diki-item.js";
 
-const sources = [{
-  url: "https://www.diki.pl/slownik-angielskiego?q=scarcely",
-  userData: { label: "detail" },
-}];
+const crawler = new Crawler(
+  ["https://www.diki.pl/slownik-angielskiego?q=the"],
+  DikiItem,
+);
 
-const crawler = new CheerioCrawler({
-  requestHandler: router,
-  maxRequestsPerCrawl: 20,
-});
-
-await purgeDefaultStorages();
-await crawler.run(sources);
+await crawler.crawl();
