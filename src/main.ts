@@ -1,9 +1,9 @@
 import { Crawler } from "./crawler.js";
-import { DikiItem } from "./parser/diki-item.js";
+import { Page } from "./diki-parser/page.js";
 
 const crawler = new Crawler(
   ["https://www.diki.pl/slownik-angielskiego?q=the"],
-  DikiItem,
+  Page,
 );
 
 await crawler.crawl();

@@ -2,7 +2,7 @@ import { load as parseHTML } from "cheerio";
 import type { Context } from "../shared-types.js";
 import { DictionaryEntity } from "./dictionary-entity.js";
 
-export function* DikiItem(page: string, context: Context<DictionaryEntity>)
+export function* Page(page: string, context: Context<DictionaryEntity>)
 {
   const $ = parseHTML(page);
   const dictionaryEntities = $("#en-pl")
