@@ -72,7 +72,7 @@ async function main(jobs: number = 10)
   const fileStats = fs.fstatSync(outputFile);
   if (fileStats.size > 2)
     fs.writeSync(outputFile, "\n]", fileStats.size - 2);
-  else 
+  else
     fs.writeSync(outputFile, "]");
   fs.closeSync(outputFile);
 }
