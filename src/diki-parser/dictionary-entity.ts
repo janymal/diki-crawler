@@ -1,6 +1,7 @@
 import type { AnyNode, Cheerio, CheerioAPI } from "cheerio";
 import { URL } from "node:url";
 import type { Context } from "../shared-types.js";
+import { arrayPushSafely } from "../utils.js";
 import { PropertiesValidator } from "../validator.js";
 import { Header } from "./header.js";
 import { MeaningGroup } from "./meaning-group.js";
@@ -55,10 +56,14 @@ export class DictionaryEntity
         validator.optional.note = child.children(".nt").text() || undefined;
       } else if (child.hasClass("dictpict"))
       {
-        validator.optional.pictures = [
-          ...validator.optional.pictures ?? [],
-          new URL(child.children("img").attr("src") ?? "", context.request.url),
-        ];
+        arrayPushSafely(
+          validator.optional,
+          "pictures",
+          new URL(
+            child.children("img").attr("src") ?? "",
+            context.request.url,
+          ),
+        );
       } else
       {
         logUnknownItem(context, child, DictionaryEntity.name);

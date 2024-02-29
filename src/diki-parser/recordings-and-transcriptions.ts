@@ -1,6 +1,7 @@
 import type { AnyNode, Cheerio, CheerioAPI } from "cheerio";
 import { URL } from "node:url";
 import type { Context } from "../shared-types.js";
+import { arrayPushSafely } from "../utils.js";
 import { PropertiesValidator } from "../validator.js";
 import type { DictionaryEntity } from "./dictionary-entity.js";
 import { Recording } from "./recording.js";
@@ -24,17 +25,19 @@ export class RecordingsAndTranscriptions
       const child = $(childElement);
       if (child.hasClass("hasRecording"))
       {
-        validator.optional.recordings = [
-          ...validator.optional.recordings ?? [],
+        arrayPushSafely(
+          validator.optional,
+          "recordings",
           Recording.parse($, context, child),
-        ];
+        );
       } else if (child.hasClass("phoneticTranscription"))
       {
         const url = child.children("a").children("img").attr("src");
-        validator.optional.transcriptions = [
-          ...validator.optional.transcriptions ?? [],
+        arrayPushSafely(
+          validator.optional,
+          "transcriptions",
           new URL(url ?? ""),
-        ];
+        );
       }
     });
     return validator.validate();

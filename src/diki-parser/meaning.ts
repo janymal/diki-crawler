@@ -1,5 +1,6 @@
 import type { AnyNode, Cheerio, CheerioAPI } from "cheerio";
 import type { Context } from "../shared-types.js";
+import { arrayPushSafely } from "../utils.js";
 import { PropertiesValidator } from "../validator.js";
 import { AdditionalInformation } from "./additional-information.js";
 import type { DictionaryEntity } from "./dictionary-entity.js";
@@ -50,10 +51,11 @@ export class Meaning
           child.text();
       } else if (child.hasClass("grammarTag"))
       {
-        validator.optional.grammarTags = [
-          ...validator.optional.grammarTags ?? [],
+        arrayPushSafely(
+          validator.optional,
+          "grammarTags",
           child.text().slice(1, -1),
-        ];
+        );
       } else if (child.hasClass("meaningAdditionalInformation"))
       {
         validator.optional.additionalInformation = AdditionalInformation.parse(
@@ -63,22 +65,25 @@ export class Meaning
         );
       } else if (child.hasClass("exampleSentence"))
       {
-        validator.optional.exampleSentences = [
-          ...validator.optional.exampleSentences ?? [],
+        arrayPushSafely(
+          validator.optional,
+          "exampleSentences",
           ExampleSentence.parse($, context, child),
-        ];
+        );
       } else if (child.hasClass("cat"))
       {
-        validator.optional.thematicDictionaries = [
-          ...validator.optional.thematicDictionaries ?? [],
+        arrayPushSafely(
+          validator.optional,
+          "thematicDictionaries",
           child.text().trim(),
-        ];
+        );
       } else if (child.hasClass("ref"))
       {
-        validator.optional.refs = [
-          ...validator.optional.refs ?? [],
+        arrayPushSafely(
+          validator.optional,
+          "refs",
           Ref.parse($, context, child),
-        ];
+        );
       } else if (child.hasClass("nt"))
         validator.optional.note = child.text().trim();
       else if (child.hasClass("mf"))

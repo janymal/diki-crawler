@@ -1,5 +1,6 @@
 import type { AnyNode, Cheerio, CheerioAPI } from "cheerio";
 import type { Context } from "../shared-types.js";
+import { arrayPushSafely } from "../utils.js";
 import { PropertiesValidator } from "../validator.js";
 import type { DictionaryEntity } from "./dictionary-entity.js";
 import { logUnknownItem } from "./utils.js";
@@ -31,21 +32,12 @@ export class AdditionalInformation
       else if (child.hasClass("languageVariety"))
         validator.optional.languageVariety = child.text();
       else if (child.hasClass("languageRegister"))
-      {
-        validator.optional.languageRegister = [
-          ...(validator.optional.languageRegister ?? []),
-          child.text(),
-        ];
-      } else if (childNode.nodeType === 3)
+        arrayPushSafely(validator.optional, "languageRegister", child.text());
+      else if (childNode.nodeType === 3)
       {
         const nodeText = child.text().trim().slice(1, -1) || undefined;
         if (nodeText)
-        {
-          validator.optional.other = [
-            ...validator.optional.other ?? [],
-            nodeText,
-          ];
-        }
+          arrayPushSafely(validator.optional, "other", nodeText);
       } else
       {
         logUnknownItem(context, child, this.name);

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import type { PickKeys } from "ts-essentials";
 
 export const getKeys = <T extends object>(object: T) =>
   Object.keys(object) as (keyof T)[];
@@ -12,6 +13,17 @@ export const ensureDir = (path: fs.PathLike) =>
 
 export const md5Hash = (string: string) =>
   createHash("md5").update(string).digest("hex").toString();
+
+export function arrayPushSafely<T, K>(
+  target: T,
+  property: PickKeys<T, K[] | undefined>,
+  item: K,
+)
+{
+  if (target[property] === undefined)
+    (target[property] as K[]) = [];
+  (target[property] as K[]).push(item);
+}
 
 export function markAsNonOverwritable<T extends Record<string, unknown>>(
   target: T,
