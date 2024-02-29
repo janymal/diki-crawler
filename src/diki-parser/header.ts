@@ -50,7 +50,7 @@ export class Header
       } else if (child.prop("tagName") === "BR")
         return;
       else
-        logUnknownItem(context, child, Header.name);
+        logUnknownItem(context, child, this.name);
     });
 
     const validated = validator.validate();

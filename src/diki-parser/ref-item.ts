@@ -36,7 +36,7 @@ export class RefItem
           RecordingsAndTranscriptions.parse($, context, child);
       } else
       {
-        logUnknownItem(context, child, RefItem.name);
+        logUnknownItem(context, child, this.name);
       }
     });
     const validated = validator.validate();

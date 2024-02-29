@@ -38,7 +38,7 @@ export class Form
           RecordingsAndTranscriptions.parse($, context, child);
       } else
       {
-        logUnknownItem(context, child, Form.name);
+        logUnknownItem(context, child, this.name);
       }
     });
 

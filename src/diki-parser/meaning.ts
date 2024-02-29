@@ -93,7 +93,7 @@ export class Meaning
       else if (child.hasClass("repetitionAddOrRemoveIconAnchor"))
         return;
       else
-        logUnknownItem(context, child, Meaning.name);
+        logUnknownItem(context, child, this.name);
       return true;
     });
     let idFromAttr = meaning.attr("id")?.trim().slice(7, -3);

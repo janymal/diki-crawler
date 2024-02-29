@@ -56,7 +56,7 @@ export class MeaningGroup
       } else if (child.hasClass("additionalSentences"))
         return;
       else
-        logUnknownItem(context, child, MeaningGroup.name);
+        logUnknownItem(context, child, this.name);
     });
     const validated = validator.validate();
     return validated as NonNullable<typeof validated>;

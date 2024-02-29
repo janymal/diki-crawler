@@ -44,7 +44,7 @@ export class ExampleSentence
       } else if (child.hasClass("repetitionAddOrRemoveIconAnchor"))
         return;
       else
-        logUnknownItem(context, child, ExampleSentence.name);
+        logUnknownItem(context, child, this.name);
     });
     validator.required.sentence = validator.required.sentence?.trim();
     const validated = validator.validate();

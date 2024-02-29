@@ -8,11 +8,13 @@ export const newDiv = (className?: string) =>
 export function logUnknownItem<T>(
   context: Context<T>,
   item: Cheerio<AnyNode>,
-  sectionName: string,
+  parserName: string,
 )
 {
   console.warn(
-    `Unknown item in the ${sectionName} section: ${item.prop("outerHTML")}`,
-    context.request.url,
+    `An item having unknown classes "${
+      item.attr("class")
+    }" found in ${parserName} parser`,
+    { url: context.request.url },
   );
 }

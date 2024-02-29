@@ -66,7 +66,7 @@ export class DictionaryEntity
         );
       } else
       {
-        logUnknownItem(context, child, DictionaryEntity.name);
+        logUnknownItem(context, child, this.name);
       }
       return true;
     });

@@ -35,7 +35,7 @@ export class Ref
       } else if (child.hasClass("refIcon"))
         return;
       else
-        logUnknownItem(context, child, Ref.name);
+        logUnknownItem(context, child, this.name);
       return true;
     });
     validator.required.items = refContents
