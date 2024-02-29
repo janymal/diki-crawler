@@ -3,7 +3,7 @@ import fs from "node:fs";
 import type { PickKeys } from "ts-essentials";
 
 export const getKeys = <T extends object>(object: T) =>
-  Object.keys(object) as (keyof T)[];
+  Object.keys(object) as Extract<keyof T, string>[];
 
 export const ensureDir = (path: fs.PathLike) =>
 {
@@ -28,9 +28,9 @@ export function arrayPushSafely<
   (target[property] as T[K] & unknown[]).push(item);
 }
 
-export function markAsNonOverwritable<T extends Record<string, unknown>>(
+export function markAsNonOverwritable<T extends object>(
   target: T,
-  propertyKey: string,
+  propertyKey: Extract<keyof T, string>,
   targetName: string,
 )
 {
