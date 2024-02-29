@@ -2,7 +2,8 @@ import type { AnyNode, Cheerio } from "cheerio";
 import console from "node:console";
 import type { Context } from "../shared-types.js";
 
-export const newDiv = (className: string) => `<div class="${className}"></div>`;
+export const newDiv = (className?: string) =>
+  `<div${className ? ` class="${className}"` : ""}></div>`;
 
 export function logUnknownItem<T>(
   context: Context<T>,
