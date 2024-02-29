@@ -14,15 +14,18 @@ export const ensureDir = (path: fs.PathLike) =>
 export const md5Hash = (string: string) =>
   createHash("md5").update(string).digest("hex").toString();
 
-export function arrayPushSafely<T, K>(
+export function arrayPushSafely<
+  T,
+  K extends PickKeys<T, unknown[] | undefined>,
+>(
   target: T,
-  property: PickKeys<T, K[] | undefined>,
-  item: K,
+  property: K,
+  item: T[K] extends (infer U)[] | undefined ? U : never,
 )
 {
   if (target[property] === undefined)
-    (target[property] as K[]) = [];
-  (target[property] as K[]).push(item);
+    target[property] = [] as T[K];
+  (target[property] as T[K] & unknown[]).push(item);
 }
 
 export function markAsNonOverwritable<T extends Record<string, unknown>>(
