@@ -1,10 +1,13 @@
-import type { OptionalKeys, RequiredKeys, Writable } from "ts-essentials";
+import type {
+  Newable,
+  OptionalKeys,
+  RequiredKeys,
+  Writable,
+} from "ts-essentials";
 import { getKeys, markAsNonOverwritable } from "./utils.js";
 
-type Newable = abstract new(...args: any[]) => any;
-
 export class PropertiesValidator<
-  T extends Newable,
+  T extends Newable<unknown>,
   Instance = InstanceType<T>,
   Optional = Writable<Pick<Instance, OptionalKeys<Instance>>>,
   Required = Writable<Pick<Instance, RequiredKeys<Instance>>>,
