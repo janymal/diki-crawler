@@ -14,11 +14,9 @@ export class Ref
     $: CheerioAPI,
     context: Context<DictionaryEntity>,
     ref: Cheerio<AnyNode>,
-  ): InstanceType<typeof this>
+  ): Ref
   {
-    const validator = new PropertiesValidator<typeof this>(this.name, [
-      "items",
-    ]);
+    const validator = new PropertiesValidator<Ref>(this.name, ["items"]);
     let secondSectionStartIndex: number | undefined;
     const refContents = ref.children().contents();
     refContents.each((i, childNode) =>
@@ -52,7 +50,6 @@ export class Ref
       })
       .get();
     validator.required.type = validator.required.type?.trim().slice(0, -1);
-    const validated = validator.validate();
-    return validated as NonNullable<typeof validated>;
+    return validator.validate();
   }
 }

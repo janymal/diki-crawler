@@ -18,9 +18,9 @@ export class MeaningGroup
     $: CheerioAPI,
     context: Context<DictionaryEntity>,
     meaningGroup: Cheerio<AnyNode>,
-  ): InstanceType<typeof this>
+  ): MeaningGroup
   {
-    const validator = new PropertiesValidator<typeof this>(this.name, [
+    const validator = new PropertiesValidator<MeaningGroup>(this.name, [
       "meanings",
     ], ["irregularForms", "partOfSpeech"]);
     meaningGroup.children().each((_, childElement) =>
@@ -58,7 +58,6 @@ export class MeaningGroup
       else
         logUnknownItem(context, child, this.name);
     });
-    const validated = validator.validate();
-    return validated as NonNullable<typeof validated>;
+    return validator.validate();
   }
 }

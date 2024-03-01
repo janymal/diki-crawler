@@ -19,9 +19,9 @@ export class ExampleSentence
     $: CheerioAPI,
     context: Context<DictionaryEntity>,
     exampleSentence: Cheerio<AnyNode>,
-  ): InstanceType<typeof this>
+  ): ExampleSentence
   {
-    const validator = new PropertiesValidator<typeof this>(this.name, [
+    const validator = new PropertiesValidator<ExampleSentence>(this.name, [
       "translation",
     ], ["recordingsAndTranscriptions"]);
     exampleSentence.contents().each((_, childNode) =>
@@ -47,7 +47,6 @@ export class ExampleSentence
         logUnknownItem(context, child, this.name);
     });
     validator.required.sentence = validator.required.sentence?.trim();
-    const validated = validator.validate();
-    return validated as NonNullable<typeof validated>;
+    return validator.validate();
   }
 }

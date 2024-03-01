@@ -18,12 +18,13 @@ export class AdditionalInformation
     $: CheerioAPI,
     context: Context<DictionaryEntity>,
     additionalInformation: Cheerio<AnyNode>,
-  ): InstanceType<typeof this> | undefined
+  ): AdditionalInformation | undefined
   {
-    const validator = new PropertiesValidator<typeof this>(this.name, [], [
-      "languageVariety",
-      "popularity",
-    ]);
+    const validator = new PropertiesValidator<AdditionalInformation>(
+      this.name,
+      [],
+      ["languageVariety", "popularity"],
+    );
     additionalInformation.contents().each((_, childNode) =>
     {
       const child = $(childNode);
@@ -44,7 +45,6 @@ export class AdditionalInformation
       }
     });
 
-    const validated = validator.validate();
-    return validated;
+    return validator.validate();
   }
 }

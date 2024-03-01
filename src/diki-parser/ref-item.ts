@@ -18,13 +18,11 @@ export class RefItem
     $: CheerioAPI,
     context: Context<DictionaryEntity>,
     refItem: Cheerio<AnyNode>,
-  ): InstanceType<typeof this>
+  ): RefItem
   {
-    const validator = new PropertiesValidator<typeof this>(
-      this.name,
-      ["term"],
-      ["recordingsAndTranscriptions"],
-    );
+    const validator = new PropertiesValidator<RefItem>(this.name, ["term"], [
+      "recordingsAndTranscriptions",
+    ]);
     refItem.children().each((_, childElement) =>
     {
       const child = $(childElement);
@@ -39,7 +37,6 @@ export class RefItem
         logUnknownItem(context, child, this.name);
       }
     });
-    const validated = validator.validate();
-    return validated as NonNullable<typeof validated>;
+    return validator.validate();
   }
 }

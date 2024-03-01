@@ -1,48 +1,45 @@
-import type {
-  Newable,
-  OptionalKeys,
-  RequiredKeys,
-  Writable,
-} from "ts-essentials";
+import type { OptionalKeys, RequiredKeys } from "ts-essentials";
 import { getKeys, markAsNonOverwritable } from "./utils.js";
 
-export class PropertiesValidator<
-  T extends Newable<unknown>,
-  Instance = InstanceType<T>,
-  Optional = Writable<Pick<Instance, OptionalKeys<Instance>>>,
-  Required = Writable<Pick<Instance, RequiredKeys<Instance>>>,
->
+type OptionalKeyStrings<T> = OptionalKeys<T> & string;
+
+type WritablePartial<T> = { -readonly [K in keyof T]?: T[K] };
+
+type TRequired<T> = WritablePartial<Pick<T, RequiredKeys<T>>>;
+type TOptional<T> = WritablePartial<Pick<T, OptionalKeys<T>>>;
+
+export class PropertiesValidator<T>
 {
-  public required: Partial<Required>;
-  public optional: Partial<Optional>;
+  public required: TRequired<T>;
+  public optional: TOptional<T>;
 
   constructor(
-    private parentName: string,
-    nonOverwritableRequired: Extract<keyof Required, string>[] = [],
-    nonOverwritableOptional: Extract<keyof Optional, string>[] = [],
+    private objectType: string,
+    nonOverwritableRequired: OptionalKeyStrings<TRequired<T>>[] = [],
+    nonOverwritableOptional: OptionalKeyStrings<TOptional<T>>[] = [],
   )
   {
     this.required = {};
     this.optional = {};
-    for (const property of nonOverwritableRequired)
-      markAsNonOverwritable(this.required, property, parentName);
-    for (const property of nonOverwritableOptional)
-      markAsNonOverwritable(this.optional, property, parentName);
+    for (const key of nonOverwritableRequired)
+      markAsNonOverwritable(this.required, key, this.objectType);
+    for (const key of nonOverwritableOptional)
+      markAsNonOverwritable(this.optional, key, this.objectType);
   }
   validate()
   {
-    for (const key in this.required)
+    for (const key of getKeys(this.required))
     {
       if (this.required[key] === undefined)
       {
         throw new TypeError(
-          `Undefined property "${key}" in an object of type "${this.parentName}"`,
+          `Undefined property "${key}" in an object of type "${this.objectType}"`,
         );
       }
     }
-    const returnValue = { ...this.required, ...this.optional };
-    return getKeys(returnValue).length > 0 ?
-      returnValue as Instance :
-      undefined;
+    const finalObject = { ...this.required, ...this.optional };
+    return (getKeys(finalObject).length > 0 ?
+      finalObject :
+      undefined) as RequiredKeys<T> extends never ? T | undefined : T;
   }
 }

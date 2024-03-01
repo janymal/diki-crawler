@@ -19,12 +19,13 @@ export class Form
     $: CheerioAPI,
     context: Context<DictionaryEntity>,
     form: Cheerio<AnyNode>,
-  ): InstanceType<typeof this>
+  ): Form
   {
-    const validator = new PropertiesValidator<typeof this>(this.name, [
-      "term",
-      "form",
-    ], ["recordingsAndTranscriptions"]);
+    const validator = new PropertiesValidator<Form>(
+      this.name,
+      ["term", "form"],
+      ["recordingsAndTranscriptions"],
+    );
     form.children().each((_, childElement) =>
     {
       const child = $(childElement);
@@ -42,7 +43,6 @@ export class Form
       }
     });
 
-    const validated = validator.validate();
-    return validated as NonNullable<typeof validated>;
+    return validator.validate();
   }
 }

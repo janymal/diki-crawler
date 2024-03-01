@@ -18,11 +18,11 @@ export class DictionaryEntity
   {}
   static parse(
     $: CheerioAPI,
-    context: Context<InstanceType<typeof this>>,
+    context: Context<DictionaryEntity>,
     dictionaryEntity: Cheerio<AnyNode>,
-  ): InstanceType<typeof this>
+  ): DictionaryEntity
   {
-    const validator = new PropertiesValidator<typeof this>(this.name, [
+    const validator = new PropertiesValidator<DictionaryEntity>(this.name, [
       "headers",
       "meaningGroups",
     ], ["note"]);
@@ -85,7 +85,6 @@ export class DictionaryEntity
         return MeaningGroup.parse($, context, meaningGroup);
       })
       .get();
-    const validated = validator.validate();
-    return validated as NonNullable<typeof validated>;
+    return validator.validate();
   }
 }

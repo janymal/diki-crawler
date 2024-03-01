@@ -17,9 +17,11 @@ export class RecordingsAndTranscriptions
     $: CheerioAPI,
     context: Context<DictionaryEntity>,
     recordingsAndTranscriptions: Cheerio<AnyNode>,
-  ): InstanceType<typeof this> | undefined
+  ): RecordingsAndTranscriptions | undefined
   {
-    const validator = new PropertiesValidator<typeof this>(this.name);
+    const validator = new PropertiesValidator<RecordingsAndTranscriptions>(
+      this.name,
+    );
     recordingsAndTranscriptions.children().each((_, childElement) =>
     {
       const child = $(childElement);

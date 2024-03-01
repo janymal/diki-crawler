@@ -30,9 +30,9 @@ export class Meaning
     meaning: Cheerio<AnyNode>,
     isNotForChildren: boolean = false,
     id?: string,
-  ): InstanceType<typeof this>
+  ): Meaning
   {
-    const validator = new PropertiesValidator<typeof this>(this.name, [
+    const validator = new PropertiesValidator<Meaning>(this.name, [
       "id",
       "notForChildren",
     ], ["additionalInformation", "mf", "note", "copyright"]);
@@ -110,7 +110,6 @@ export class Meaning
     validator.required.notForChildren = isNotForChildren;
     validator.required.id = id ?? idFromAttr;
     validator.required.terms = validator.required.terms?.trim();
-    const validated = validator.validate();
-    return validated as NonNullable<typeof validated>;
+    return validator.validate();
   }
 }

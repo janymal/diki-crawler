@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
-import type { PickKeys } from "ts-essentials";
+import type { OptionalKeys, PickKeys } from "ts-essentials";
 
 export const getKeys = <T extends object>(object: T) =>
-  Object.keys(object) as Extract<keyof T, string>[];
+  Object.keys(object) as (keyof T & string)[];
 
 export const ensureDir = (path: fs.PathLike) =>
 {
@@ -28,10 +28,10 @@ export function arrayPushSafely<
   (target[property] as T[K] & unknown[]).push(item);
 }
 
-export function markAsNonOverwritable<T extends object>(
+export function markAsNonOverwritable<T>(
   target: T,
-  propertyKey: Extract<keyof T, string>,
-  targetName: string,
+  propertyKey: OptionalKeys<T> & string,
+  objectType: string,
 )
 {
   const valueVar = `__value_of_${propertyKey}__`;
@@ -48,7 +48,7 @@ export function markAsNonOverwritable<T extends object>(
       else
       {
         throw new Error(
-          `Overwriting the property "${propertyKey}" in an object of type "${targetName}"`,
+          `Overwriting the property "${propertyKey}" in an object of type "${objectType}"`,
         );
       }
     },

@@ -12,9 +12,9 @@ export class Recording
     _: CheerioAPI,
     context: Context<DictionaryEntity>,
     recording: Cheerio<AnyNode>,
-  ): InstanceType<typeof this>
+  ): Recording
   {
-    const validator = new PropertiesValidator<typeof this>(this.name, [
+    const validator = new PropertiesValidator<Recording>(this.name, [
       "url",
       "lang",
     ]);
@@ -23,7 +23,6 @@ export class Recording
       recording.children(".soundOnClick").attr("item-audio-url") ?? "",
       context.request.url,
     );
-    const validated = validator.validate();
-    return validated as NonNullable<typeof validated>;
+    return validator.validate();
   }
 }

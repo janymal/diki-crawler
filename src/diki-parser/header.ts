@@ -21,9 +21,9 @@ export class Header
     $: CheerioAPI,
     context: Context<DictionaryEntity>,
     header: Cheerio<AnyNode>,
-  ): InstanceType<typeof this>
+  ): Header
   {
-    const validator = new PropertiesValidator<typeof this>(this.name, [
+    const validator = new PropertiesValidator<Header>(this.name, [
       "title",
       "lessPopular",
     ], ["additionalInformation", "recordingsAndTranscriptions"]);
@@ -53,7 +53,6 @@ export class Header
         logUnknownItem(context, child, this.name);
     });
 
-    const validated = validator.validate();
-    return validated as NonNullable<typeof validated>;
+    return validator.validate();
   }
 }
