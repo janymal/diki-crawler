@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^8.57.0",
-    "@tsconfig/node21": "^21.0.1",
+    "@tsconfig/bun": "^1.0.4",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.11.21",
     "@typescript-eslint/eslint-plugin": "^7.1.0",
@@ -23,13 +23,10 @@
     "typescript": "~5.3.3"
   },
   "scripts": {
-    "start": "npm run start:dev",
-    "start:prod": "node dist/main.js",
-    "start:dev": "tsx src/main.ts",
-    "build": "tsc",
+    "start": "bun run src/main.ts",
     "lint": "eslint .",
     "format": "dprint fmt"
   },
-  "author": "It's not you it's me",
-  "license": "ISC"
+  "author": "Jan Kot",
+  "license": "CC0"
 }
