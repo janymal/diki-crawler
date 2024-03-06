@@ -9,23 +9,16 @@
     "lodash-es": "^4.17.21"
   },
   "devDependencies": {
-    "@eslint/js": "^8.57.0",
+    "@biomejs/biome": "^1.5.3",
     "@tsconfig/bun": "^1.0.4",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.11.21",
-    "@typescript-eslint/eslint-plugin": "^7.1.0",
-    "@typescript-eslint/parser": "^7.1.0",
-    "dprint": "^0.45.0",
-    "eslint": "^8.57.0",
-    "eslint-plugin-unicorn": "^51.0.1",
-    "ts-essentials": "^9.4.1",
-    "tsx": "^4.7.1",
-    "typescript": "~5.3.3"
+    "ts-essentials": "^9.4.1"
   },
   "scripts": {
     "start": "bun run src/main.ts",
-    "lint": "eslint .",
-    "format": "dprint fmt"
+    "lint": "biome lint src/",
+    "format": "biome format --write src/"
   },
   "author": "Jan Kot",
   "license": "CC0"
