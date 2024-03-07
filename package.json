@@ -17,8 +17,8 @@
   },
   "scripts": {
     "start": "bun run src/main.ts",
-    "lint": "biome lint src/",
-    "format": "biome format --write src/"
+    "lint": "biome lint src",
+    "format": "biome format --write src"
   },
   "author": "Jan Kot",
   "license": "CC0"
