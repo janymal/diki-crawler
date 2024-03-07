@@ -1,5 +1,5 @@
 import type { OptionalKeysOf, RequiredKeysOf } from "type-fest";
-import { getKeys, markAsNonOverwritable } from "./utils.js";
+import { getDefinedKeys, getKeys, markAsNonOverwritable } from "./utils.js";
 
 type OptionalKeyStrings<T extends object> = OptionalKeysOf<T> & string;
 
@@ -34,7 +34,7 @@ export class PropertiesValidator<T extends object> {
         }
         const finalObject = { ...this.required, ...this.optional };
         return (
-            getKeys(finalObject).length > 0 ? finalObject : undefined
+            getDefinedKeys(finalObject).length > 0 ? finalObject : undefined
         ) as RequiredKeysOf<T> extends never ? T | undefined : T;
     }
 }

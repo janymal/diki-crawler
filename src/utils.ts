@@ -5,6 +5,9 @@ import type { ConditionalKeys, OptionalKeysOf } from "type-fest";
 export const getKeys = <T extends object>(object: T) =>
     Object.keys(object) as (keyof T & string)[];
 
+export const getDefinedKeys = <T extends object>(object: T) =>
+    getKeys(object).filter((key) => object[key] !== undefined);
+
 export const ensureDir = (path: fs.PathLike) => {
     if (!fs.existsSync(path)) fs.mkdirSync(path);
 };
