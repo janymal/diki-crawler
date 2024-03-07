@@ -18,7 +18,7 @@
   "scripts": {
     "start": "bun run src/main.ts",
     "lint": "biome lint src",
-    "format": "biome format --write src"
+    "format": "biome check --formatter-enabled=true --linter-enabled=false --organize-imports-enabled=true --apply src"
   },
   "author": "Jan Kot",
   "license": "CC0"
