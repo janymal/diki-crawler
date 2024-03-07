@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
-import type { OptionalKeys, PickKeys } from "ts-essentials";
+import type { ConditionalKeys, OptionalKeysOf } from "type-fest";
 
 export const getKeys = <T extends object>(object: T) =>
     Object.keys(object) as (keyof T & string)[];
@@ -14,7 +14,7 @@ export const md5Hash = (string: string) =>
 
 export function arrayPushSafely<
     T,
-    K extends PickKeys<T, unknown[] | undefined>,
+    K extends ConditionalKeys<T, unknown[] | undefined>,
 >(
     target: T,
     property: K,
@@ -24,9 +24,9 @@ export function arrayPushSafely<
     (target[property] as T[K] & unknown[]).push(item);
 }
 
-export function markAsNonOverwritable<T>(
+export function markAsNonOverwritable<T extends object>(
     target: T,
-    propertyKey: OptionalKeys<T> & string,
+    propertyKey: OptionalKeysOf<T> & string,
     objectType: string,
 ) {
     const valueVar = `__value_of_${propertyKey}__`;

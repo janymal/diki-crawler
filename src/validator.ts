@@ -1,14 +1,14 @@
-import type { OptionalKeys, RequiredKeys } from "ts-essentials";
+import type { OptionalKeysOf, RequiredKeysOf } from "type-fest";
 import { getKeys, markAsNonOverwritable } from "./utils.js";
 
-type OptionalKeyStrings<T> = OptionalKeys<T> & string;
+type OptionalKeyStrings<T extends object> = OptionalKeysOf<T> & string;
 
 type WritablePartial<T> = { -readonly [K in keyof T]?: T[K] };
 
-type TRequired<T> = WritablePartial<Pick<T, RequiredKeys<T>>>;
-type TOptional<T> = WritablePartial<Pick<T, OptionalKeys<T>>>;
+type TRequired<T extends object> = WritablePartial<Pick<T, RequiredKeysOf<T>>>;
+type TOptional<T extends object> = WritablePartial<Pick<T, OptionalKeysOf<T>>>;
 
-export class PropertiesValidator<T> {
+export class PropertiesValidator<T extends object> {
     public required: TRequired<T>;
     public optional: TOptional<T>;
 
@@ -35,6 +35,6 @@ export class PropertiesValidator<T> {
         const finalObject = { ...this.required, ...this.optional };
         return (
             getKeys(finalObject).length > 0 ? finalObject : undefined
-        ) as RequiredKeys<T> extends never ? T | undefined : T;
+        ) as RequiredKeysOf<T> extends never ? T | undefined : T;
     }
 }
