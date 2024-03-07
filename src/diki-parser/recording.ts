@@ -1,5 +1,5 @@
-import type { AnyNode, Cheerio, CheerioAPI } from "cheerio";
 import { URL } from "node:url";
+import type { AnyNode, Cheerio, CheerioAPI } from "cheerio";
 import type { Context } from "../shared-types.js";
 import { PropertiesValidator } from "../validator.js";
 import type { DictionaryEntity } from "./dictionary-entity.js";

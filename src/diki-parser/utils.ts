@@ -1,5 +1,5 @@
-import type { AnyNode, Cheerio } from "cheerio";
 import console from "node:console";
+import type { AnyNode, Cheerio } from "cheerio";
 import type { Context } from "../shared-types.js";
 
 export const newDiv = (className?: string) =>

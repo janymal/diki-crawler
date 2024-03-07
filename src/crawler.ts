@@ -1,7 +1,7 @@
-import type { AxiosInstance } from "axios";
-import axios from "axios";
 import console from "node:console";
 import fs from "node:fs";
+import type { AxiosInstance } from "axios";
+import axios from "axios";
 import type { ParsedRequest, ParsingFunction } from "./shared-types.js";
 import { ensureDir, md5Hash } from "./utils.js";
 

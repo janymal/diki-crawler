@@ -1,8 +1,8 @@
+import console from "node:console";
+import fs from "node:fs";
 import type { AxiosError, AxiosInstance, AxiosProxyConfig } from "axios";
 import axios from "axios";
 import { shuffle } from "lodash-es";
-import console from "node:console";
-import fs from "node:fs";
 
 function testProxy(
     instance: AxiosInstance,
