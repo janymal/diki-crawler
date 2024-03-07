@@ -19,7 +19,7 @@ export class Header {
         header: Cheerio<AnyNode>,
     ): Header {
         const validator = new PropertiesValidator<Header>(
-            this.name,
+            Header.name,
             ["title", "lessPopular"],
             ["additionalInformation", "recordingsAndTranscriptions"],
         );
@@ -39,7 +39,7 @@ export class Header {
                 validator.optional.additionalInformation =
                     AdditionalInformation.parse($, context, child);
             } else if (child.prop("tagName") === "BR") return;
-            else logUnknownItem(context, child, this.name);
+            else logUnknownItem(context, child, Header.name);
         });
 
         return validator.validate();

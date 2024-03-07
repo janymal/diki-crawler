@@ -28,7 +28,7 @@ function testProxy(
         );
 }
 
-async function main(jobs: number = 10) {
+async function main(jobs = 10) {
     const instance = axios.create();
     const outputFile = fs.openSync("proxies.json", "w");
     fs.writeSync(outputFile, "[\n");

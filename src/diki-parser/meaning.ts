@@ -26,11 +26,11 @@ export class Meaning {
         $: CheerioAPI,
         context: Context<DictionaryEntity>,
         meaning: Cheerio<AnyNode>,
-        isNotForChildren: boolean = false,
+        isNotForChildren = false,
         id?: string,
     ): Meaning {
         const validator = new PropertiesValidator<Meaning>(
-            this.name,
+            Meaning.name,
             ["id", "notForChildren"],
             ["additionalInformation", "mf", "note", "copyright"],
         );
@@ -38,10 +38,10 @@ export class Meaning {
         meaning.contents().each((_, childNode) => {
             const child = $(childNode);
             if (child.hasClass("hiddenNotForChildrenMeaning")) {
-                isNotForChildren = true;
                 meaningNotForChildren = child;
                 return false;
-            } else if (child.hasClass("hw") || childNode.nodeType === 3) {
+            }
+            if (child.hasClass("hw") || childNode.nodeType === 3) {
                 validator.required.terms =
                     (validator.required.terms ?? "") + child.text();
             } else if (child.hasClass("grammarTag")) {
@@ -83,16 +83,16 @@ export class Meaning {
             else if (child.hasClass("meaning_copyright"))
                 validator.optional.copyright = child.text().trim();
             else if (child.hasClass("repetitionAddOrRemoveIconAnchor")) return;
-            else logUnknownItem(context, child, this.name);
+            else logUnknownItem(context, child, Meaning.name);
             return true;
         });
-        let idFromAttr = meaning.attr("id")?.trim().slice(7, -3);
+        const idFromAttr = meaning.attr("id")?.trim().slice(7, -3);
         if (meaningNotForChildren !== undefined) {
             return Meaning.parse(
                 $,
                 context,
                 meaningNotForChildren,
-                isNotForChildren,
+                true,
                 idFromAttr,
             );
         }

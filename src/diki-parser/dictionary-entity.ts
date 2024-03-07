@@ -20,7 +20,7 @@ export class DictionaryEntity {
         dictionaryEntity: Cheerio<AnyNode>,
     ): DictionaryEntity {
         const validator = new PropertiesValidator<DictionaryEntity>(
-            this.name,
+            DictionaryEntity.name,
             ["headers", "meaningGroups"],
             ["note"],
         );
@@ -34,7 +34,8 @@ export class DictionaryEntity {
             ) {
                 secondSectionStartIndex = i;
                 return false;
-            } else if (child.hasClass("hws")) {
+            }
+            if (child.hasClass("hws")) {
                 validator.required.headers = child
                     .children("h1")
                     .children(".hw")
@@ -59,7 +60,7 @@ export class DictionaryEntity {
                     ),
                 );
             } else {
-                logUnknownItem(context, child, this.name);
+                logUnknownItem(context, child, DictionaryEntity.name);
             }
             return true;
         });

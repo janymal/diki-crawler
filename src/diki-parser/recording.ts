@@ -14,7 +14,7 @@ export class Recording {
         context: Context<DictionaryEntity>,
         recording: Cheerio<AnyNode>,
     ): Recording {
-        const validator = new PropertiesValidator<Recording>(this.name, [
+        const validator = new PropertiesValidator<Recording>(Recording.name, [
             "url",
             "lang",
         ]);

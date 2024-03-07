@@ -11,7 +11,7 @@ export class Crawler<T> {
     constructor(
         private entryUrls: string[],
         private parser: ParsingFunction<T>,
-        private outputDir: string = "data",
+        private outputDir = "data",
         // private maxRetries: number = 3,
         // private maxRequestsPerMinute: number = 10,
     ) {
@@ -42,11 +42,9 @@ export class Crawler<T> {
         items: responseData,
     }: ParsedRequest<T>) {
         if (request.url === undefined) throw new Error("request url is empty");
-        else {
-            const fileName = md5Hash(request.url);
-            const fileContent = JSON.stringify(responseData, undefined, 4);
-            fs.writeFileSync(`${this.outputDir}/${fileName}.json`, fileContent);
-        }
+        const fileName = md5Hash(request.url);
+        const fileContent = JSON.stringify(responseData, undefined, 4);
+        fs.writeFileSync(`${this.outputDir}/${fileName}.json`, fileContent);
     }
     private async urlPipeline(url: string) {
         console.log(`[INFO] Parsing ${url}...`);

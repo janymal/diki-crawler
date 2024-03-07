@@ -17,7 +17,7 @@ export class ExampleSentence {
         exampleSentence: Cheerio<AnyNode>,
     ): ExampleSentence {
         const validator = new PropertiesValidator<ExampleSentence>(
-            this.name,
+            ExampleSentence.name,
             ["translation"],
             ["recordingsAndTranscriptions"],
         );
@@ -42,7 +42,7 @@ export class ExampleSentence {
                     );
             } else if (child.hasClass("repetitionAddOrRemoveIconAnchor"))
                 return;
-            else logUnknownItem(context, child, this.name);
+            else logUnknownItem(context, child, ExampleSentence.name);
         });
         validator.required.sentence = validator.required.sentence?.trim();
         return validator.validate();

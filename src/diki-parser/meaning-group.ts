@@ -18,7 +18,7 @@ export class MeaningGroup {
         meaningGroup: Cheerio<AnyNode>,
     ): MeaningGroup {
         const validator = new PropertiesValidator<MeaningGroup>(
-            this.name,
+            MeaningGroup.name,
             ["meanings"],
             ["irregularForms", "partOfSpeech"],
         );
@@ -48,7 +48,7 @@ export class MeaningGroup {
                     })
                     .get();
             } else if (child.hasClass("additionalSentences")) return;
-            else logUnknownItem(context, child, this.name);
+            else logUnknownItem(context, child, MeaningGroup.name);
         });
         return validator.validate();
     }

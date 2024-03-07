@@ -16,7 +16,7 @@ export class Ref {
         context: Context<DictionaryEntity>,
         ref: Cheerio<AnyNode>,
     ): Ref {
-        const validator = new PropertiesValidator<Ref>(this.name, ["items"]);
+        const validator = new PropertiesValidator<Ref>(Ref.name, ["items"]);
         let secondSectionStartIndex: number | undefined;
         const refContents = ref.children().contents();
         refContents.each((i, childNode) => {
@@ -28,7 +28,7 @@ export class Ref {
                 secondSectionStartIndex = i;
                 return false;
             } else if (child.hasClass("refIcon")) return;
-            else logUnknownItem(context, child, this.name);
+            else logUnknownItem(context, child, Ref.name);
             return true;
         });
         validator.required.items = refContents

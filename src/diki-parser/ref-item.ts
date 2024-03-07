@@ -16,7 +16,7 @@ export class RefItem {
         refItem: Cheerio<AnyNode>,
     ): RefItem {
         const validator = new PropertiesValidator<RefItem>(
-            this.name,
+            RefItem.name,
             ["term"],
             ["recordingsAndTranscriptions"],
         );
@@ -28,7 +28,7 @@ export class RefItem {
                 validator.optional.recordingsAndTranscriptions =
                     RecordingsAndTranscriptions.parse($, context, child);
             } else {
-                logUnknownItem(context, child, this.name);
+                logUnknownItem(context, child, RefItem.name);
             }
         });
         return validator.validate();

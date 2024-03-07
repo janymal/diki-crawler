@@ -18,7 +18,7 @@ export class AdditionalInformation {
         additionalInformation: Cheerio<AnyNode>,
     ): AdditionalInformation | undefined {
         const validator = new PropertiesValidator<AdditionalInformation>(
-            this.name,
+            AdditionalInformation.name,
             [],
             ["languageVariety", "popularity"],
         );
@@ -39,7 +39,7 @@ export class AdditionalInformation {
                 if (nodeText)
                     arrayPushSafely(validator.optional, "other", nodeText);
             } else {
-                logUnknownItem(context, child, this.name);
+                logUnknownItem(context, child, AdditionalInformation.name);
             }
         });
 

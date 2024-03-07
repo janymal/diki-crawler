@@ -17,7 +17,7 @@ export class Form {
         form: Cheerio<AnyNode>,
     ): Form {
         const validator = new PropertiesValidator<Form>(
-            this.name,
+            Form.name,
             ["term", "form"],
             ["recordingsAndTranscriptions"],
         );
@@ -31,7 +31,7 @@ export class Form {
                 validator.optional.recordingsAndTranscriptions =
                     RecordingsAndTranscriptions.parse($, context, child);
             } else {
-                logUnknownItem(context, child, this.name);
+                logUnknownItem(context, child, Form.name);
             }
         });
 

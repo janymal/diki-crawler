@@ -17,7 +17,7 @@ export class RecordingsAndTranscriptions {
         recordingsAndTranscriptions: Cheerio<AnyNode>,
     ): RecordingsAndTranscriptions | undefined {
         const validator = new PropertiesValidator<RecordingsAndTranscriptions>(
-            this.name,
+            RecordingsAndTranscriptions.name,
         );
         recordingsAndTranscriptions.children().each((_, childElement) => {
             const child = $(childElement);
